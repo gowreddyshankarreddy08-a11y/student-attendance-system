@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Attendance Portal | Student Attendance Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Google Fonts for modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-logo">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                        <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                    </svg>
+                </div>
+                <div class="brand-info">
+                    <h2>AttendSmart</h2>
+                    <span>Faculty Management</span>
+                </div>
+            </div>
+
+            <!-- Mode Indicator -->
+            <div class="mode-badge-container">
+                <div id="backendStatusBadge" class="mode-badge connected">
+                    <span class="status-dot"></span>
+                    <span id="backendStatusText">Checking Backend...</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-tab="dashboard">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" data-tab="take-attendance">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    <span>Take Attendance</span>
+                    <span class="badge-quick">Fast</span>
+                </button>
+                <button class="nav-item" data-tab="students">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Students</span>
+                </button>
+                <button class="nav-item" data-tab="defaulters">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span>Defaulters Alert</span>
+                    <span id="navDefaulterCount" class="badge-count">0</span>
+                </button>
+                <button class="nav-item" data-tab="reports">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    <span>Reports & Export</span>
+                </button>
+                <button class="nav-item" data-tab="courses">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                    <span>Courses</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="faculty-profile">
+                    <div class="avatar">DR</div>
+                    <div class="profile-meta">
+                        <strong>Faculty Portal</strong>
+                        <span>Academic Year 2026-27</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-wrapper">
+            <!-- Header Bar -->
+            <header class="topbar">
+                <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle Navigation">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="topbar-title">
+                    <h1 id="pageTitle">Dashboard Overview</h1>
+                    <span id="currentDateDisplay" class="date-tag"></span>
+                </div>
+                <div class="topbar-actions">
+                    <button class="btn btn-primary" onclick="app.showTakeAttendanceTab()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Take Attendance
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-scroll">
+                <!-- TAB 1: DASHBOARD -->
+                <section class="tab-pane active" id="tab-dashboard">
+                    <!-- Metric Cards -->
+                    <div class="metrics-grid">
+                        <div class="card metric-card">
+                            <div class="metric-icon students-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                </svg>
+                            </div>
+                            <div class="metric-data">
+                                <span class="metric-label">Enrolled Students</span>
+                                <h3 id="statTotalStudents" class="metric-value">--</h3>
+                                <span class="metric-sub">Active in Semester</span>
+                            </div>
+                        </div>
+
+                        <div class="card metric-card">
+                            <div class="metric-icon rate-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                </svg>
+                            </div>
+                            <div class="metric-data">
+                                <span class="metric-label">Avg Attendance</span>
+                                <h3 id="statOverallRate" class="metric-value">--%</h3>
+                                <span class="metric-sub text-success">Institute Target: 75%+</span>
+                            </div>
+                        </div>
+
+                        <div class="card metric-card">
+                            <div class="metric-icon sessions-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </div>
+                            <div class="metric-data">
+                                <span class="metric-label">Lectures Held</span>
+                                <h3 id="statTotalSessions" class="metric-value">--</h3>
+                                <span class="metric-sub">Across All Courses</span>
+                            </div>
+                        </div>
+
+                        <div class="card metric-card alert-card">
+                            <div class="metric-icon alert-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                            </div>
+                            <div class="metric-data">
+                                <span class="metric-label">Defaulters (<75%)</span>
+                                <h3 id="statDefaulters" class="metric-value text-danger">--</h3>
+                                <span class="metric-sub">Need Recovery Warning</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Action & Subject Progress -->
+                    <div class="dashboard-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Course Attendance Health</h3>
+                                <span class="badge">Current Term</span>
+                            </div>
+                            <div class="card-body" id="courseHealthList">
+                                <!-- Dynamic course health bars -->
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Faculty Quick Workflow</h3>
+                                <span class="badge-success">Saves 15 mins/day</span>
+                            </div>
+                            <div class="card-body faculty-tips">
+                                <div class="tip-step">
+                                    <div class="step-num">1</div>
+                                    <div class="step-desc">
+                                        <strong>Select Course & Lecture Slot</strong>
+                                        <p>Pick your current subject and date in "Take Attendance".</p>
+                                    </div>
+                                </div>
+                                <div class="tip-step">
+                                    <div class="step-num">2</div>
+                                    <div class="step-desc">
+                                        <strong>1-Click "Mark All Present"</strong>
+                                        <p>Don't call every name. Mark all present in 1 click, then only tap the 2-3 absent students!</p>
+                                    </div>
+                                </div>
+                                <div class="tip-step">
+                                    <div class="step-num">3</div>
+                                    <div class="step-desc">
+                                        <strong>Instant Defaulter Alert & CSV Export</strong>
+                                        <p>Automatically flags students below 75% for exam hall ticket eligibility.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Sessions Table -->
+                    <div class="card table-card">
+                        <div class="card-header">
+                            <h3>Recent Attendance Sessions</h3>
+                            <button class="btn btn-secondary btn-sm" onclick="app.showTab('reports')">View All</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Course</th>
+                                        <th>Time Slot</th>
+                                        <th>Present / Total</th>
+                                        <th>Turnout %</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentSessionsTableBody">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: TAKE ATTENDANCE (FACULTY TIME SAVER) -->
+                <section class="tab-pane" id="tab-take-attendance">
+                    <div class="card attendance-session-card">
+                        <div class="session-form-row">
+                            <div class="form-group">
+                                <label for="attendanceCourseSelect">Select Course / Subject</label>
+                                <select id="attendanceCourseSelect" class="form-control" onchange="app.onAttendanceCourseChange()">
+                                    <!-- Options populated by JS -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="attendanceDateInput">Lecture Date</label>
+                                <input type="date" id="attendanceDateInput" class="form-control" onchange="app.checkExistingSession()">
+                            </div>
+                            <div class="form-group">
+                                <label for="attendanceTimeSlot">Time Slot</label>
+                                <select id="attendanceTimeSlot" class="form-control">
+                                    <option value="09:00 AM - 10:00 AM">09:00 AM - 10:00 AM (Slot 1)</option>
+                                    <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM (Slot 2)</option>
+                                    <option value="11:15 AM - 12:15 PM">11:15 AM - 12:15 PM (Slot 3)</option>
+                                    <option value="01:15 PM - 02:15 PM">01:15 PM - 02:15 PM (Slot 4)</option>
+                                    <option value="02:15 PM - 03:15 PM">02:15 PM - 03:15 PM (Slot 5)</option>
+                                    <option value="03:30 PM - 04:30 PM">03:30 PM - 04:30 PM (Slot 6)</option>
+                                </select>
+                            </div>
+                            <div class="form-group session-notes-group">
+                                <label for="attendanceTopicInput">Lecture Topic / Notes (Optional)</label>
+                                <input type="text" id="attendanceTopicInput" class="form-control" placeholder="e.g. Unit 3: B-Tree Indexing & Query Plans">
+                            </div>
+                        </div>
+
+                        <!-- Rapid Faculty Action Toolbar -->
+                        <div class="attendance-toolbar">
+                            <div class="toolbar-left">
+                                <div class="search-box">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                    <input type="text" id="attendanceFilterInput" placeholder="Filter by Roll No or Name..." oninput="app.filterAttendanceList()">
+                                </div>
+                            </div>
+                            <div class="toolbar-right">
+                                <button type="button" class="btn btn-outline-success" onclick="app.markAllStatus('PRESENT')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    Mark All Present
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="app.markAllStatus('ABSENT')">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    Mark All Absent
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Live Summary Counter Bar -->
+                        <div class="live-counter-strip">
+                            <div class="counter-item text-success">
+                                <span>Present:</span>
+                                <strong id="counterPresent">0</strong>
+                            </div>
+                            <div class="counter-item text-danger">
+                                <span>Absent:</span>
+                                <strong id="counterAbsent">0</strong>
+                            </div>
+                            <div class="counter-item text-warning">
+                                <span>Late:</span>
+                                <strong id="counterLate">0</strong>
+                            </div>
+                            <div class="counter-item text-info">
+                                <span>Excused:</span>
+                                <strong id="counterExcused">0</strong>
+                            </div>
+                            <div class="counter-item total-summary">
+                                <span>Turnout:</span>
+                                <strong id="counterTurnout">0%</strong>
+                            </div>
+                        </div>
+
+                        <!-- Attendance Marking Student Grid -->
+                        <div class="attendance-table-container">
+                            <table class="data-table attendance-input-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 100px;">Roll No</th>
+                                        <th>Student Name</th>
+                                        <th>Department</th>
+                                        <th>Overall %</th>
+                                        <th style="text-align: center; width: 340px;">Attendance Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceMarkingBody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="session-save-footer">
+                            <div class="footer-hint">
+                                * Tip: Changes are immediately saved and sync with your records.
+                            </div>
+                            <button type="button" class="btn btn-primary btn-lg" onclick="app.submitAttendanceSession()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                    <polyline points="7 3 7 8 15 8"></polyline>
+                                </svg>
+                                Save & Submit Attendance
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 3: STUDENTS DIRECTORY -->
+                <section class="tab-pane" id="tab-students">
+                    <div class="card table-card">
+                        <div class="card-header toolbar-header">
+                            <div class="header-search">
+                                <input type="text" id="studentSearchInput" placeholder="Search by name, roll no, or email..." class="form-control" oninput="app.filterStudents()">
+                            </div>
+                            <div class="header-actions">
+                                <button class="btn btn-primary" onclick="app.openAddStudentModal()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Add Student
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Roll No</th>
+                                        <th>Student Name</th>
+                                        <th>Email Address</th>
+                                        <th>Department</th>
+                                        <th>Semester</th>
+                                        <th>Classes (Attended / Total)</th>
+                                        <th>Attendance %</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentDirectoryBody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 4: DEFAULTERS ALERT (<75%) -->
+                <section class="tab-pane" id="tab-defaulters">
+                    <div class="card">
+                        <div class="card-header defaulter-header">
+                            <div>
+                                <h3>Attendance Shortage Warning List (<75%)</h3>
+                                <p class="sub-text">Students falling short of the mandatory university attendance requirement for semester examinations.</p>
+                            </div>
+                            <div class="header-actions">
+                                <button class="btn btn-secondary" onclick="app.copyDefaulterList()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                    Copy Notice Text
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="app.exportDefaultersCsv()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Export Defaulters CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Roll No</th>
+                                        <th>Student Name</th>
+                                        <th>Email</th>
+                                        <th>Attended / Total</th>
+                                        <th>Current %</th>
+                                        <th>Severity</th>
+                                        <th>Classes Needed to Reach 75%</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="defaulterTableBody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 5: REPORTS & EXPORT -->
+                <section class="tab-pane" id="tab-reports">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h3>Generate Attendance Reports</h3>
+                                <p class="sub-text">Export official reports for department records, parents, or university submission.</p>
+                            </div>
+                            <div class="header-actions">
+                                <button class="btn btn-secondary" onclick="window.print()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                        <rect x="6" y="14" width="12" height="8"></rect>
+                                    </svg>
+                                    Print / Save PDF
+                                </button>
+                                <button class="btn btn-primary" onclick="app.exportAttendanceCsv()">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    Export CSV Report
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="report-filters">
+                                <div class="form-group">
+                                    <label for="reportCourseSelect">Filter by Course</label>
+                                    <select id="reportCourseSelect" class="form-control" onchange="app.renderReportTable()">
+                                        <option value="">All Courses</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive report-print-area">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Roll No</th>
+                                            <th>Student Name</th>
+                                            <th>Department</th>
+                                            <th>Total Lectures</th>
+                                            <th>Present</th>
+                                            <th>Absent</th>
+                                            <th>Late</th>
+                                            <th>Turnout %</th>
+                                            <th>Eligibility Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reportTableBody">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 6: COURSES -->
+                <section class="tab-pane" id="tab-courses">
+                    <div class="card table-card">
+                        <div class="card-header toolbar-header">
+                            <div>
+                                <h3>Academic Course Roster</h3>
+                                <p class="sub-text">Courses assigned to faculty and student batches.</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="app.openAddCourseModal()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Add Course
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Course Code</th>
+                                        <th>Course Name</th>
+                                        <th>Department</th>
+                                        <th>Faculty In-Charge</th>
+                                        <th>Total Sessions</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="coursesTableBody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: ADD STUDENT -->
+    <div class="modal" id="addStudentModal">
+        <div class="modal-backdrop" onclick="app.closeModal('addStudentModal')"></div>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Add New Student</h3>
+                <button class="btn-close" onclick="app.closeModal('addStudentModal')">&times;</button>
+            </div>
+            <form id="addStudentForm" onsubmit="app.saveNewStudent(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="newRollNo">Roll Number *</label>
+                        <input type="text" id="newRollNo" class="form-control" placeholder="e.g. CS-116" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newName">Full Name *</label>
+                        <input type="text" id="newName" class="form-control" placeholder="e.g. John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newEmail">Email Address *</label>
+                        <input type="email" id="newEmail" class="form-control" placeholder="e.g. student@college.edu" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newDept">Department</label>
+                            <input type="text" id="newDept" class="form-control" value="Computer Science">
+                        </div>
+                        <div class="form-group">
+                            <label for="newSem">Semester</label>
+                            <input type="number" id="newSem" class="form-control" value="5" min="1" max="8">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeModal('addStudentModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD COURSE -->
+    <div class="modal" id="addCourseModal">
+        <div class="modal-backdrop" onclick="app.closeModal('addCourseModal')"></div>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Add New Course</h3>
+                <button class="btn-close" onclick="app.closeModal('addCourseModal')">&times;</button>
+            </div>
+            <form id="addCourseForm" onsubmit="app.saveNewCourse(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="newCourseCode">Course Code *</label>
+                        <input type="text" id="newCourseCode" class="form-control" placeholder="e.g. CS305" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newCourseName">Course Title *</label>
+                        <input type="text" id="newCourseName" class="form-control" placeholder="e.g. Machine Learning" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newCourseDept">Department</label>
+                        <input type="text" id="newCourseDept" class="form-control" value="Computer Science">
+                    </div>
+                    <div class="form-group">
+                        <label for="newCourseFaculty">Faculty In-Charge</label>
+                        <input type="text" id="newCourseFaculty" class="form-control" placeholder="e.g. Dr. John McCarthy">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeModal('addCourseModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Course</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: STUDENT ATTENDANCE HISTORY / DETAIL -->
+    <div class="modal" id="studentDetailModal">
+        <div class="modal-backdrop" onclick="app.closeModal('studentDetailModal')"></div>
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <div class="student-header-info">
+                    <h3 id="modalStudentName">Student Profile</h3>
+                    <span id="modalStudentRoll" class="badge"></span>
+                </div>
+                <button class="btn-close" onclick="app.closeModal('studentDetailModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="student-summary-strip" id="modalStudentSummary">
+                    <!-- Populated dynamically -->
+                </div>
+                <h4 style="margin: 1.25rem 0 0.75rem;">Subject Breakdown</h4>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Attended / Total</th>
+                                <th>Attendance %</th>
+                                <th>Exam Eligibility</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalStudentCoursesBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="app.closeModal('studentDetailModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
