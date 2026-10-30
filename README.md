@@ -1,37 +1,53 @@
-# 🎓 AttendSmart - Student Attendance Management System
+# 🎓 AttendSmart - Student Attendance Management & Admin System
 
-> **A high-productivity attendance management system designed for academic institutions to eliminate manual attendance bottlenecks, simplify record keeping, and reduce faculty workload.**
+> **A high-productivity attendance management system designed for academic institutions to eliminate manual attendance bottlenecks, simplify record keeping, and empower faculty and administrators with comprehensive controls.**
 
-Built with **Java (Backend REST API & Server)**, **HTML5**, **CSS3**, and **Modern JavaScript (Responsive Faculty UI)**.
+Built with **Java (Backend REST API & Embedded Server)**, **HTML5**, **CSS3**, and **Modern JavaScript (Responsive UI with Role-Based Access)**.
 
 ---
 
-## 🌟 Key Features (Engineered for Faculty Efficiency)
+## 🔑 Default Login Credentials
 
-1. **⚡ Rapid Attendance Marking (15-Minute Daily Faculty Time-Saver)**
-   - **1-Click "Mark All Present"**: Mark an entire lecture of 60+ students present in a single tap, then just tap the 2-3 absentees!
-   - Instant search filter by student Roll Number or Name.
-   - Status toggle chips: `Present` (Green), `Absent` (Red), `Late` (Amber), and `Leave/Excused` (Sky Blue).
-   - Real-time live counter showing present turnout, absent counts, and class percentage.
+| Role | Username | Password | Access Capabilities |
+| :--- | :--- | :--- | :--- |
+| **🛡️ Administrator** | `admin` | `admin123` | Full system control: Faculty roster management, attendance threshold configuration, full JSON database backup & reset, all student records |
+| **👨‍🏫 Faculty Member** | `faculty` | `faculty123` | Quick attendance marking, student directory, defaulter recovery advisor, CSV/PDF reports |
 
-2. **⚠️ Automated Defaulter Detection (<75% Eligibility Cutoff)**
-   - Flags students whose overall attendance falls below university examination eligibility requirements.
-   - Automatic recovery calculation: Shows exactly how many consecutive classes a student must attend to reach 75%.
-   - **1-Click "Copy Notice Text"**: Generates a formatted message ready to paste into faculty emails or notice boards.
+> *Tip: On the public website, 1-click **"Quick Demo Login"** buttons are available to sign in immediately without typing!*
 
-3. **📊 Reports & Official Exports**
-   - Filter reports by course or overall semester.
-   - 1-Click **"Export CSV Report"** compatible with Microsoft Excel and Google Sheets.
-   - Print-optimized layout (**"Print / Save PDF"**) for department submissions.
+---
 
-4. **👥 Student & Course Directory**
-   - Track students by Roll Number, Department, Semester, and individual attendance history.
-   - Student modal view with per-subject breakdown and exam eligibility status.
-   - Add/delete students and courses directly from the portal.
+## 🌟 Key Features
 
-5. **🔄 Smart Dual-Mode Architecture**
-   - **Local Java Server Mode**: Connects to the lightweight Java backend (`com.sun.net.httpserver`) and persists all records to local JSON storage.
-   - **Online Public Web Mode (GitHub Pages)**: Runs directly in any web browser with local storage persistence and pre-populated sample records so anyone with your public link can test it immediately without needing a server!
+### 1. 🛡️ Dedicated Admin Control Panel
+- **Faculty & Instructor Management**: Add new faculty members, assign roles, view assigned courses, and manage teaching staff.
+- **Institutional Rule Configuration**: Adjust the minimum attendance threshold (e.g. 75%, 80%) dynamically, changing defaulter detection across all courses.
+- **System Backup & Restore**: Download a complete JSON database backup with 1 click, or reset to sample defaults anytime.
+
+### 2. ⚡ Rapid Attendance Marking (15-Minute Daily Faculty Time-Saver)
+- **1-Click "Mark All Present"**: Mark an entire lecture of 60+ students present in a single tap, then just tap the 2-3 absentees!
+- Instant search filter by student Roll Number or Name.
+- Status toggle chips: `Present` (Green), `Absent` (Red), `Late` (Amber), and `Leave/Excused` (Sky Blue).
+- Real-time live counter showing present turnout, absent counts, and class percentage.
+
+### 3. ⚠️ Automated Defaulter Detection (<75% Eligibility Cutoff)
+- Flags students whose overall attendance falls below university examination eligibility requirements.
+- **Smart Recovery Advisor**: Calculates the exact number of consecutive classes a student must attend to reach the cutoff.
+- **1-Click "Copy Notice Text"**: Generates a formatted message ready to paste into faculty emails or notice boards.
+
+### 4. 📊 Reports & Official Exports
+- Filter reports by course or overall semester.
+- 1-Click **"Export CSV Report"** compatible with Microsoft Excel and Google Sheets.
+- Print-optimized layout (**"Print / Save PDF"**) for department submissions.
+
+### 5. 👥 Student & Course Directory
+- Track students by Roll Number, Department, Semester, and individual attendance history.
+- Student modal view with per-subject breakdown and exam eligibility status.
+- Add/delete students and courses directly from the portal.
+
+### 6. 🔄 Smart Dual-Mode Architecture
+- **Local Java Server Mode**: Connects to the lightweight Java backend (`com.sun.net.httpserver`) and persists all records to local JSON storage.
+- **Online Public Web Mode (GitHub Pages)**: Runs directly in any web browser with local storage persistence and pre-populated sample records so anyone with your public link can test it immediately without needing a server!
 
 ---
 
@@ -69,7 +85,7 @@ Follow these simple steps to push this project to your GitHub account and publis
 1. Log in to [GitHub](https://github.com/).
 2. Click the **`+`** icon in the top right corner and select **New repository**.
 3. Name your repository (e.g., `student-attendance-system`).
-4. Set visibility to **Public** (important for free GitHub Pages).
+4. Set visibility to **Public** *(required for free GitHub Pages)*.
 5. **Do not** check "Initialize this repository with a README" (since we already have one).
 6. Click **Create repository**.
 
@@ -77,14 +93,6 @@ Follow these simple steps to push this project to your GitHub account and publis
 Open your terminal / PowerShell in this project folder and run:
 
 ```bash
-# Initialize git (if not already initialized)
-git init
-git branch -M main
-
-# Add all files and make the first commit
-git add .
-git commit -m "Initial commit: Student Attendance Management System"
-
 # Connect to your GitHub repository (replace with your GitHub username)
 git remote add origin https://github.com/<YOUR-GITHUB-USERNAME>/student-attendance-system.git
 
@@ -123,22 +131,23 @@ student-attendance-system/
 │   └── com/attendance/
 │       ├── Main.java           # Entry point: initializes data store, service & HTTP server
 │       ├── model/
+│       │   ├── User.java       # User entity (Admin & Faculty credentials & roles)
 │       │   ├── Student.java    # Student entity (Roll No, Name, Email, Semester)
 │       │   ├── Course.java     # Course entity (Code, Name, Faculty)
 │       │   └── AttendanceRecord.java # Session record (Date, Slot, Student Status Map)
 │       ├── storage/
 │       │   └── DataStore.java  # Thread-safe persistent JSON store with sample seeder
 │       ├── service/
-│       │   └── AttendanceService.java # Analytics, defaulter calculation, CSV generator
+│       │   └── AttendanceService.java # Analytics, auth, defaulter calculation, CSV generator
 │       └── server/
 │           └── AttendanceHttpServer.java # Pure Java REST API & static file web server
 │
 ├── web/ & docs/ & root
-│   ├── index.html              # Responsive faculty portal layout
+│   ├── index.html              # Login screen & responsive faculty/admin portal
 │   ├── css/
-│   │   └── style.css           # Modern, accessible styling with print stylesheets
+│   │   └── style.css           # Design system (login, admin badges, print styling)
 │   └── js/
-│       └── app.js              # Interactive UI controller with Dual-Mode storage
+│       └── app.js              # Auth controller, role switcher, and dual-mode storage
 │
 ├── data/
 │   └── attendance_database.json # Auto-generated persistent JSON database
@@ -153,20 +162,25 @@ student-attendance-system/
 
 ## 🔌 REST API Endpoints (Java Backend)
 
-When running the Java server, the following RESTful endpoints are available:
-
-| Endpoint | Method | Description |
-| :--- | :--- | :--- |
-| `/api/stats` | `GET` | Overall dashboard metrics (total students, classes, attendance %, defaulters) |
-| `/api/students` | `GET` | List all students with attendance percentages |
-| `/api/students` | `POST` | Add a new student record |
-| `/api/students?id=...` | `DELETE`| Remove a student record |
-| `/api/courses` | `GET` | List all registered courses |
-| `/api/courses` | `POST` | Add a new course |
-| `/api/attendance` | `GET` | Get attendance records (filter by `courseId` & `date`) |
-| `/api/attendance` | `POST` | Save/submit an attendance session |
-| `/api/defaulters` | `GET` | List students below attendance cutoff (default `75%`) |
-| `/api/export/csv` | `GET` | Downloadable CSV report |
+| Endpoint | Method | Role | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/auth/login` | `POST` | Public | Authenticates user credentials and issues session token |
+| `/api/admin/users` | `GET` | Admin | Lists registered faculty and administrators |
+| `/api/admin/users` | `POST` | Admin | Registers a new faculty or admin member |
+| `/api/admin/users?username=...` | `DELETE`| Admin | Removes a faculty account |
+| `/api/admin/settings` | `GET` | Admin | Retrieves institutional attendance settings |
+| `/api/admin/settings` | `POST` | Admin | Updates minimum attendance threshold and term |
+| `/api/admin/reset` | `POST` | Admin | Resets system database to sample defaults |
+| `/api/stats` | `GET` | All | Overall dashboard metrics & KPI |
+| `/api/students` | `GET` | All | List all students with calculated attendance percentages |
+| `/api/students` | `POST` | All | Add a new student record |
+| `/api/students?id=...` | `DELETE`| All | Remove a student record |
+| `/api/courses` | `GET` | All | List all registered courses |
+| `/api/courses` | `POST` | All | Add a new course |
+| `/api/attendance` | `GET` | All | Query attendance records by course & date |
+| `/api/attendance` | `POST` | All | Submit/save attendance session |
+| `/api/defaulters` | `GET` | All | List students below threshold |
+| `/api/export/csv` | `GET` | All | Downloadable CSV report |
 
 ---
 

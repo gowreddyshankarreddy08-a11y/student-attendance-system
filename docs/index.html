@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faculty Attendance Portal | Student Attendance Management System</title>
+    <title>AttendSmart | Student Attendance Management & Admin Portal</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- Google Fonts for modern typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,23 +11,91 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-layout">
+
+    <!-- ====================================================================
+         1. LOGIN SCREEN (Shown when not authenticated)
+         ==================================================================== -->
+    <div id="loginScreen" class="login-wrapper">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                        <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                    </svg>
+                </div>
+                <h2>AttendSmart Portal</h2>
+                <p id="loginInstitutionTag">Student Attendance Management System</p>
+            </div>
+
+            <!-- Role Quick Pick Pills -->
+            <div class="quick-login-strip">
+                <span class="quick-title">Quick Demo Login:</span>
+                <div class="quick-buttons">
+                    <button type="button" class="btn-pill admin-pill" onclick="app.quickLogin('admin')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Admin Panel
+                    </button>
+                    <button type="button" class="btn-pill faculty-pill" onclick="app.quickLogin('faculty')">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Faculty Portal
+                    </button>
+                </div>
+            </div>
+
+            <form id="loginForm" onsubmit="app.handleLoginFormSubmit(event)" class="login-form">
+                <div id="loginAlert" class="alert-box alert-error" style="display: none;"></div>
+
+                <div class="form-group">
+                    <label for="loginUsername">Username / ID</label>
+                    <div class="input-with-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <input type="text" id="loginUsername" class="form-control" placeholder="admin or faculty" required autocomplete="username">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <div class="input-with-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <input type="password" id="loginPassword" class="form-control" placeholder="admin123 or faculty123" required autocomplete="current-password">
+                    </div>
+                </div>
+
+                <button type="submit" id="loginSubmitBtn" class="btn btn-primary btn-block btn-lg">
+                    <span>Sign In to Portal</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <div class="credentials-hint">
+                    <small>Default Credentials: <strong>admin</strong> / <code>admin123</code> &bull; <strong>faculty</strong> / <code>faculty123</code></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         2. MAIN APPLICATION (Shown when authenticated)
+         ==================================================================== -->
+    <div class="app-layout" id="mainAppLayout" style="display: none;">
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="brand-logo">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
                         <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
                     </svg>
                 </div>
                 <div class="brand-info">
                     <h2>AttendSmart</h2>
-                    <span>Faculty Management</span>
+                    <span id="sidebarRoleBadge" class="role-badge">Faculty Portal</span>
                 </div>
             </div>
 
-            <!-- Mode Indicator -->
+            <!-- Mode Indicator (Java vs GitHub Pages) -->
             <div class="mode-badge-container">
                 <div id="backendStatusBadge" class="mode-badge connected">
                     <span class="status-dot"></span>
@@ -36,6 +104,7 @@
             </div>
 
             <nav class="sidebar-nav">
+                <!-- Common Navigation -->
                 <button class="nav-item active" data-tab="dashboard">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="7" height="7"></rect>
@@ -45,6 +114,7 @@
                     </svg>
                     <span>Dashboard</span>
                 </button>
+
                 <button class="nav-item" data-tab="take-attendance">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 11l3 3L22 4"></path>
@@ -53,6 +123,7 @@
                     <span>Take Attendance</span>
                     <span class="badge-quick">Fast</span>
                 </button>
+
                 <button class="nav-item" data-tab="students">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -62,6 +133,7 @@
                     </svg>
                     <span>Students</span>
                 </button>
+
                 <button class="nav-item" data-tab="defaulters">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
@@ -71,6 +143,7 @@
                     <span>Defaulters Alert</span>
                     <span id="navDefaulterCount" class="badge-count">0</span>
                 </button>
+
                 <button class="nav-item" data-tab="reports">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -79,6 +152,7 @@
                     </svg>
                     <span>Reports & Export</span>
                 </button>
+
                 <button class="nav-item" data-tab="courses">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
@@ -86,15 +160,43 @@
                     </svg>
                     <span>Courses</span>
                 </button>
+
+                <!-- ADMIN-ONLY TABS (Visible only for role = ADMIN) -->
+                <div class="admin-nav-group" id="adminNavGroup">
+                    <div class="nav-heading">ADMIN PANEL</div>
+                    <button class="nav-item" data-tab="admin-faculty">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="8.5" cy="7" r="4"></circle>
+                            <line x1="20" y1="8" x2="20" y2="14"></line>
+                            <line x1="23" y1="11" x2="17" y2="11"></line>
+                        </svg>
+                        <span>Faculty Roster</span>
+                    </button>
+                    <button class="nav-item" data-tab="admin-settings">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span>System Settings</span>
+                    </button>
+                </div>
             </nav>
 
             <div class="sidebar-footer">
                 <div class="faculty-profile">
-                    <div class="avatar">DR</div>
+                    <div class="avatar" id="sidebarAvatar">AD</div>
                     <div class="profile-meta">
-                        <strong>Faculty Portal</strong>
-                        <span>Academic Year 2026-27</span>
+                        <strong id="sidebarUserName">Administrator</strong>
+                        <span id="sidebarUserRole">System Admin</span>
                     </div>
+                    <button class="btn-logout" onclick="app.logout()" title="Logout">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </aside>
@@ -115,6 +217,7 @@
                     <span id="currentDateDisplay" class="date-tag"></span>
                 </div>
                 <div class="topbar-actions">
+                    <span id="topbarRoleIndicator" class="badge badge-info">Admin</span>
                     <button class="btn btn-primary" onclick="app.showTakeAttendanceTab()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -122,6 +225,7 @@
                         </svg>
                         Take Attendance
                     </button>
+                    <button class="btn btn-secondary btn-sm" onclick="app.logout()">Logout</button>
                 </div>
             </header>
 
@@ -154,7 +258,7 @@
                             <div class="metric-data">
                                 <span class="metric-label">Avg Attendance</span>
                                 <h3 id="statOverallRate" class="metric-value">--%</h3>
-                                <span class="metric-sub text-success">Institute Target: 75%+</span>
+                                <span class="metric-sub text-success" id="statThresholdSub">Requirement: 75%+</span>
                             </div>
                         </div>
 
@@ -183,9 +287,9 @@
                                 </svg>
                             </div>
                             <div class="metric-data">
-                                <span class="metric-label">Defaulters (<75%)</span>
+                                <span class="metric-label">Defaulters</span>
                                 <h3 id="statDefaulters" class="metric-value text-danger">--</h3>
-                                <span class="metric-sub">Need Recovery Warning</span>
+                                <span class="metric-sub">Below Exam Cutoff</span>
                             </div>
                         </div>
                     </div>
@@ -195,7 +299,7 @@
                         <div class="card">
                             <div class="card-header">
                                 <h3>Course Attendance Health</h3>
-                                <span class="badge">Current Term</span>
+                                <span class="badge" id="healthTermBadge">Fall 2026</span>
                             </div>
                             <div class="card-body" id="courseHealthList">
                                 <!-- Dynamic course health bars -->
@@ -204,29 +308,29 @@
 
                         <div class="card">
                             <div class="card-header">
-                                <h3>Faculty Quick Workflow</h3>
-                                <span class="badge-success">Saves 15 mins/day</span>
+                                <h3>Faculty Productivity Features</h3>
+                                <span class="badge-success">Workflow Ready</span>
                             </div>
                             <div class="card-body faculty-tips">
                                 <div class="tip-step">
                                     <div class="step-num">1</div>
                                     <div class="step-desc">
-                                        <strong>Select Course & Lecture Slot</strong>
-                                        <p>Pick your current subject and date in "Take Attendance".</p>
+                                        <strong>1-Click "Mark All Present"</strong>
+                                        <p>Mark 60+ students present instantly, then simply tap the 2-3 absent students!</p>
                                     </div>
                                 </div>
                                 <div class="tip-step">
                                     <div class="step-num">2</div>
                                     <div class="step-desc">
-                                        <strong>1-Click "Mark All Present"</strong>
-                                        <p>Don't call every name. Mark all present in 1 click, then only tap the 2-3 absent students!</p>
+                                        <strong>Automatic Recovery Estimator</strong>
+                                        <p>Calculates consecutive classes needed to restore exam eligibility for attendance defaulters.</p>
                                     </div>
                                 </div>
                                 <div class="tip-step">
                                     <div class="step-num">3</div>
                                     <div class="step-desc">
-                                        <strong>Instant Defaulter Alert & CSV Export</strong>
-                                        <p>Automatically flags students below 75% for exam hall ticket eligibility.</p>
+                                        <strong>Admin Institution Controls</strong>
+                                        <p>Admins can configure cutoffs, manage faculty, and export complete database backups.</p>
                                     </div>
                                 </div>
                             </div>
@@ -412,12 +516,12 @@
                     </div>
                 </section>
 
-                <!-- TAB 4: DEFAULTERS ALERT (<75%) -->
+                <!-- TAB 4: DEFAULTERS ALERT -->
                 <section class="tab-pane" id="tab-defaulters">
                     <div class="card">
                         <div class="card-header defaulter-header">
                             <div>
-                                <h3>Attendance Shortage Warning List (<75%)</h3>
+                                <h3 id="defaulterTitle">Attendance Shortage Warning List (<span id="defaulterThresholdText">75</span>%)</h3>
                                 <p class="sub-text">Students falling short of the mandatory university attendance requirement for semester examinations.</p>
                             </div>
                             <div class="header-actions">
@@ -449,7 +553,7 @@
                                         <th>Attended / Total</th>
                                         <th>Current %</th>
                                         <th>Severity</th>
-                                        <th>Classes Needed to Reach 75%</th>
+                                        <th>Classes Needed to Recover</th>
                                     </tr>
                                 </thead>
                                 <tbody id="defaulterTableBody">
@@ -557,6 +661,105 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- ========================================================
+                     ADMIN-EXCLUSIVE TABS
+                     ======================================================== -->
+
+                <!-- TAB 7: ADMIN FACULTY MANAGEMENT -->
+                <section class="tab-pane" id="tab-admin-faculty">
+                    <div class="card table-card">
+                        <div class="card-header toolbar-header">
+                            <div>
+                                <h3>Faculty & Instructor Roster (Admin)</h3>
+                                <p class="sub-text">Manage professors, lecturers, and their teaching credentials.</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="app.openAddFacultyModal()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Add Faculty Member
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Faculty Name</th>
+                                        <th>Email Address</th>
+                                        <th>Department</th>
+                                        <th>Role</th>
+                                        <th>Assigned Courses</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminFacultyTableBody">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 8: ADMIN SYSTEM SETTINGS & BACKUP -->
+                <section class="tab-pane" id="tab-admin-settings">
+                    <div class="settings-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Institutional Attendance Rules</h3>
+                            </div>
+                            <form id="adminSettingsForm" onsubmit="app.saveAdminSettings(event)">
+                                <div class="form-group">
+                                    <label for="settingInstitutionName">Institution Name</label>
+                                    <input type="text" id="settingInstitutionName" class="form-control" value="Apex Institute of Science & Technology" required>
+                                </div>
+                                <div class="form-group" style="margin-top: 1rem;">
+                                    <label for="settingThreshold">Minimum Attendance Eligibility Threshold (%)</label>
+                                    <input type="number" id="settingThreshold" class="form-control" value="75" min="50" max="95" step="1" required>
+                                    <small class="text-secondary" style="margin-top: 0.25rem;">Students falling below this percentage are automatically flagged as Defaulters for semester exam hall tickets.</small>
+                                </div>
+                                <div class="form-group" style="margin-top: 1rem;">
+                                    <label for="settingAcademicTerm">Current Academic Term / Semester</label>
+                                    <input type="text" id="settingAcademicTerm" class="form-control" value="Academic Year 2026-27 (Fall Sem)" required>
+                                </div>
+                                <div style="margin-top: 1.5rem;">
+                                    <button type="submit" class="btn btn-primary">Save Institutional Settings</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>System Data & Database Management</h3>
+                            </div>
+                            <div class="backup-actions">
+                                <div class="action-row">
+                                    <div>
+                                        <strong>Export Complete JSON Database</strong>
+                                        <p class="sub-text">Download a complete backup snapshot of students, courses, attendance sessions, and users.</p>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary" onclick="app.exportFullDatabaseJson()">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                        Backup DB (JSON)
+                                    </button>
+                                </div>
+                                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1rem 0;">
+                                <div class="action-row">
+                                    <div>
+                                        <strong>Reset Database to Sample Defaults</strong>
+                                        <p class="sub-text">Restores sample student records, courses, and attendance logs for demonstration.</p>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-danger" onclick="app.resetSystemData()">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.2"/></svg>
+                                        Reset to Sample Data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -632,6 +835,54 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="app.closeModal('addCourseModal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Create Course</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD FACULTY (ADMIN ONLY) -->
+    <div class="modal" id="addFacultyModal">
+        <div class="modal-backdrop" onclick="app.closeModal('addFacultyModal')"></div>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Register Faculty Member</h3>
+                <button class="btn-close" onclick="app.closeModal('addFacultyModal')">&times;</button>
+            </div>
+            <form id="addFacultyForm" onsubmit="app.saveNewFaculty(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="facultyUsername">Username *</label>
+                        <input type="text" id="facultyUsername" class="form-control" placeholder="e.g. jdoe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="facultyName">Full Name *</label>
+                        <input type="text" id="facultyName" class="form-control" placeholder="e.g. Dr. Jane Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="facultyEmail">Email Address *</label>
+                        <input type="email" id="facultyEmail" class="form-control" placeholder="e.g. jdoe@college.edu" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="facultyDept">Department</label>
+                            <input type="text" id="facultyDept" class="form-control" value="Computer Science">
+                        </div>
+                        <div class="form-group">
+                            <label for="facultyRole">Role</label>
+                            <select id="facultyRole" class="form-control">
+                                <option value="FACULTY">Faculty / Instructor</option>
+                                <option value="ADMIN">System Administrator</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="facultyPassword">Initial Password</label>
+                        <input type="password" id="facultyPassword" class="form-control" value="faculty123">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="app.closeModal('addFacultyModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Faculty</button>
                 </div>
             </form>
         </div>

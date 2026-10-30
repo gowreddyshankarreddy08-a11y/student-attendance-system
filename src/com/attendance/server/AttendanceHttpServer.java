@@ -3,9 +3,9 @@ package com.attendance.server;
 import com.attendance.model.AttendanceRecord;
 import com.attendance.model.Course;
 import com.attendance.model.Student;
+import com.attendance.model.User;
 import com.attendance.service.AttendanceService;
 import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.*;
@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 
 /**
  * Lightweight, high-performance embedded HTTP server for the Attendance Management System.
- * Serves both the REST API and the HTML/CSS/JS frontend.
+ * Serves both the REST API (with Admin & Authentication support) and the HTML/CSS/JS frontend.
  */
 public class AttendanceHttpServer {
     private final int port;
@@ -42,7 +42,13 @@ public class AttendanceHttpServer {
             ? Executors.newCachedThreadPool() 
             : Executors.newFixedThreadPool(10));
 
-        // API Endpoints
+        // Authentication & Admin Endpoints
+        server.createContext("/api/auth/login", this::handleLogin);
+        server.createContext("/api/admin/users", this::handleAdminUsers);
+        server.createContext("/api/admin/settings", this::handleAdminSettings);
+        server.createContext("/api/admin/reset", this::handleAdminReset);
+
+        // Standard Attendance API Endpoints
         server.createContext("/api/stats", this::handleStats);
         server.createContext("/api/students", this::handleStudents);
         server.createContext("/api/courses", this::handleCourses);
@@ -55,11 +61,11 @@ public class AttendanceHttpServer {
 
         server.start();
         System.out.println("==============================================================");
-        System.out.println("   STUDENT ATTENDANCE MANAGEMENT SYSTEM (FACULTY PORTAL)       ");
+        System.out.println("   STUDENT ATTENDANCE SYSTEM (ADMIN & FACULTY PORTAL)         ");
         System.out.println("==============================================================");
         System.out.println("-> Server started successfully on: http://localhost:" + port + "/");
-        System.out.println("-> Web root directory: " + webRoot);
-        System.out.println("-> Ready to accept faculty requests.");
+        System.out.println("-> Admin Credentials:   Username: admin   | Password: admin123");
+        System.out.println("-> Faculty Credentials: Username: faculty | Password: faculty123");
         System.out.println("==============================================================");
     }
 
@@ -69,16 +75,130 @@ public class AttendanceHttpServer {
         }
     }
 
+    private void handleLogin(HttpExchange exchange) throws IOException {
+        if (handleCors(exchange)) return;
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            sendResponse(exchange, 405, "text/plain", "Method Not Allowed".getBytes(StandardCharsets.UTF_8));
+            return;
+        }
+
+        String body = readRequestBody(exchange);
+        String username = extractJsonString(body, "username");
+        String password = extractJsonString(body, "password");
+
+        User user = service.authenticate(username, password);
+        if (user != null) {
+            String token = "sess_" + UUID.randomUUID().toString();
+            String res = String.format(
+                "{\"success\":true,\"token\":\"%s\",\"user\":%s}",
+                token, user.toJson()
+            );
+            sendResponse(exchange, 200, "application/json", res.getBytes(StandardCharsets.UTF_8));
+        } else {
+            sendResponse(exchange, 401, "application/json", "{\"success\":false,\"error\":\"Invalid username or password\"}".getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private void handleAdminUsers(HttpExchange exchange) throws IOException {
+        if (handleCors(exchange)) return;
+        String method = exchange.getRequestMethod().toUpperCase();
+
+        if ("GET".equals(method)) {
+            List<User> users = service.getAllUsers();
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < users.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(users.get(i).toJson());
+            }
+            sb.append("]");
+            sendResponse(exchange, 200, "application/json", sb.toString().getBytes(StandardCharsets.UTF_8));
+        } else if ("POST".equals(method)) {
+            String body = readRequestBody(exchange);
+            User u = new User();
+            u.setUsername(extractJsonString(body, "username"));
+            u.setPassword(extractJsonString(body, "password"));
+            u.setName(extractJsonString(body, "name"));
+            u.setRole(extractJsonString(body, "role"));
+            u.setEmail(extractJsonString(body, "email"));
+            u.setDepartment(extractJsonString(body, "department"));
+
+            if (u.getUsername() == null || u.getName() == null) {
+                sendResponse(exchange, 400, "application/json", "{\"error\":\"Username and name required\"}".getBytes(StandardCharsets.UTF_8));
+                return;
+            }
+            User saved = service.addUser(u);
+            sendResponse(exchange, 201, "application/json", saved.toJson().getBytes(StandardCharsets.UTF_8));
+        } else if ("DELETE".equals(method)) {
+            Map<String, String> params = parseQueryParams(exchange.getRequestURI().getQuery());
+            String username = params.get("username");
+            if (username != null && service.deleteUser(username)) {
+                sendResponse(exchange, 200, "application/json", "{\"success\":true}".getBytes(StandardCharsets.UTF_8));
+            } else {
+                sendResponse(exchange, 400, "application/json", "{\"error\":\"Cannot delete user or not found\"}".getBytes(StandardCharsets.UTF_8));
+            }
+        } else {
+            sendResponse(exchange, 405, "text/plain", "Method Not Allowed".getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private void handleAdminSettings(HttpExchange exchange) throws IOException {
+        if (handleCors(exchange)) return;
+        String method = exchange.getRequestMethod().toUpperCase();
+
+        if ("GET".equals(method)) {
+            Map<String, String> settings = service.getSettings();
+            StringBuilder sb = new StringBuilder("{");
+            int c = 0;
+            for (Map.Entry<String, String> e : settings.entrySet()) {
+                if (c > 0) sb.append(",");
+                sb.append(String.format("\"%s\":\"%s\"", escape(e.getKey()), escape(e.getValue())));
+                c++;
+            }
+            sb.append("}");
+            sendResponse(exchange, 200, "application/json", sb.toString().getBytes(StandardCharsets.UTF_8));
+        } else if ("POST".equals(method)) {
+            String body = readRequestBody(exchange);
+            Map<String, String> newSettings = new HashMap<>();
+            String thresh = extractJsonString(body, "minAttendanceThreshold");
+            String inst = extractJsonString(body, "institutionName");
+            String term = extractJsonString(body, "academicTerm");
+
+            if (thresh != null) newSettings.put("minAttendanceThreshold", thresh);
+            if (inst != null) newSettings.put("institutionName", inst);
+            if (term != null) newSettings.put("academicTerm", term);
+
+            service.updateSettings(newSettings);
+            sendResponse(exchange, 200, "application/json", "{\"success\":true}".getBytes(StandardCharsets.UTF_8));
+        } else {
+            sendResponse(exchange, 405, "text/plain", "Method Not Allowed".getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private void handleAdminReset(HttpExchange exchange) throws IOException {
+        if (handleCors(exchange)) return;
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            sendResponse(exchange, 405, "text/plain", "Method Not Allowed".getBytes(StandardCharsets.UTF_8));
+            return;
+        }
+        service.resetToDefaultData();
+        sendResponse(exchange, 200, "application/json", "{\"success\":true,\"message\":\"Database reset to sample defaults\"}".getBytes(StandardCharsets.UTF_8));
+    }
+
     private void handleStats(HttpExchange exchange) throws IOException {
         if (handleCors(exchange)) return;
         Map<String, Object> stats = service.getOverallStats();
+        Map<?, ?> settings = (Map<?, ?>) stats.get("settings");
+        String instName = settings != null && settings.containsKey("institutionName") ? settings.get("institutionName").toString() : "Apex University";
+
         String json = String.format(
-            "{\"totalStudents\":%d,\"totalCourses\":%d,\"totalSessions\":%d,\"overallAttendanceRate\":%.1f,\"defaulterCount\":%d}",
+            "{\"totalStudents\":%d,\"totalCourses\":%d,\"totalSessions\":%d,\"totalFaculty\":%d,\"overallAttendanceRate\":%.1f,\"defaulterCount\":%d,\"institutionName\":\"%s\"}",
             (int) stats.get("totalStudents"),
             (int) stats.get("totalCourses"),
             (int) stats.get("totalSessions"),
+            (long) stats.get("totalFaculty"),
             (double) stats.get("overallAttendanceRate"),
-            (int) stats.get("defaulterCount")
+            (int) stats.get("defaulterCount"),
+            escape(instName)
         );
         sendResponse(exchange, 200, "application/json", json.getBytes(StandardCharsets.UTF_8));
     }
@@ -229,7 +349,6 @@ public class AttendanceHttpServer {
 
         Path target = webRoot.resolve(uriPath.substring(1)).normalize();
         if (!target.startsWith(webRoot) || !Files.exists(target) || Files.isDirectory(target)) {
-            // Fallback to index.html for single-page routing
             target = webRoot.resolve("index.html");
         }
 

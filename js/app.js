@@ -1,6 +1,6 @@
 /**
- * AttendSmart - Faculty Student Attendance Management System
- * Full Frontend Controller with Smart Dual-Mode (Java API + GitHub Pages LocalStorage)
+ * AttendSmart - Student Attendance Management & Admin System
+ * Full Frontend Controller with Admin Authentication & Dual-Mode (Java API + GitHub Pages LocalStorage)
  */
 
 class AttendanceApp {
@@ -8,11 +8,18 @@ class AttendanceApp {
         this.apiBase = '';
         this.isBackendConnected = false;
         this.currentTab = 'dashboard';
+        this.currentUser = null;
         
         // In-memory data store
         this.students = [];
         this.courses = [];
         this.records = [];
+        this.users = [];
+        this.settings = {
+            institutionName: 'Apex Institute of Science & Technology',
+            minAttendanceThreshold: 75.0,
+            academicTerm: 'Academic Year 2026-27 (Fall Sem)'
+        };
         this.currentAttendanceState = {}; // studentId -> status
 
         this.init();
@@ -23,17 +30,140 @@ class AttendanceApp {
         this.setupCurrentDate();
         await this.detectBackend();
         await this.loadAllData();
-        this.renderAll();
+        this.checkAuthSession();
     }
 
     /* ------------------------------------------------------------------------
-       Backend Detection & Storage Abstraction (Dual-Mode)
+       Authentication & Role-Based Session
+       ------------------------------------------------------------------------ */
+    checkAuthSession() {
+        const storedUser = sessionStorage.getItem('attendsmart_user') || localStorage.getItem('attendsmart_user');
+        if (storedUser) {
+            try {
+                this.currentUser = JSON.parse(storedUser);
+                this.showAppLayout();
+                return;
+            } catch (e) {
+                this.currentUser = null;
+            }
+        }
+        this.showLoginScreen();
+    }
+
+    showLoginScreen() {
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('mainAppLayout').style.display = 'none';
+        
+        const instTag = document.getElementById('loginInstitutionTag');
+        if (instTag && this.settings.institutionName) {
+            instTag.textContent = `${this.settings.institutionName} • Attendance System`;
+        }
+    }
+
+    showAppLayout() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainAppLayout').style.display = 'flex';
+
+        // Apply User Meta & Permissions
+        const role = (this.currentUser && this.currentUser.role) ? this.currentUser.role.toUpperCase() : 'FACULTY';
+        const isAdmin = role === 'ADMIN';
+
+        // Update Sidebar User Info
+        document.getElementById('sidebarUserName').textContent = this.currentUser ? this.currentUser.name : 'User';
+        document.getElementById('sidebarUserRole').textContent = isAdmin ? 'System Administrator' : 'Faculty Member';
+        document.getElementById('sidebarAvatar').textContent = this.currentUser && this.currentUser.name ? this.currentUser.name.split(' ').map(n=>n[0]).join('').slice(0, 2).toUpperCase() : 'US';
+        
+        const roleBadge = document.getElementById('sidebarRoleBadge');
+        roleBadge.textContent = isAdmin ? 'Administrator' : 'Faculty Portal';
+        roleBadge.className = `role-badge ${isAdmin ? 'admin-role' : ''}`;
+
+        const topbarBadge = document.getElementById('topbarRoleIndicator');
+        topbarBadge.textContent = isAdmin ? 'Admin' : 'Faculty';
+        topbarBadge.className = `badge ${isAdmin ? 'badge-info' : 'badge-success'}`;
+
+        // Toggle Admin Nav Group Visibility
+        const adminNav = document.getElementById('adminNavGroup');
+        if (adminNav) {
+            adminNav.style.display = isAdmin ? 'flex' : 'none';
+        }
+
+        this.renderAll();
+    }
+
+    quickLogin(role) {
+        if (role === 'admin') {
+            document.getElementById('loginUsername').value = 'admin';
+            document.getElementById('loginPassword').value = 'admin123';
+        } else {
+            document.getElementById('loginUsername').value = 'faculty';
+            document.getElementById('loginPassword').value = 'faculty123';
+        }
+        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+    }
+
+    async handleLoginFormSubmit(e) {
+        e.preventDefault();
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value.trim();
+        const alertBox = document.getElementById('loginAlert');
+        alertBox.style.display = 'none';
+
+        if (this.isBackendConnected) {
+            try {
+                const res = await fetch(`${this.apiBase}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.user) {
+                        this.currentUser = data.user;
+                        sessionStorage.setItem('attendsmart_user', JSON.stringify(data.user));
+                        this.showToast(`Welcome back, ${data.user.name}!`, 'success');
+                        this.showAppLayout();
+                        return;
+                    }
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    alertBox.textContent = data.error || 'Invalid credentials. Please verify username and password.';
+                    alertBox.style.display = 'block';
+                    return;
+                }
+            } catch (err) {
+                console.warn('API login failed, checking local credentials:', err);
+            }
+        }
+
+        // Local Storage / Standalone Fallback
+        const user = this.users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+        if (user) {
+            this.currentUser = user;
+            sessionStorage.setItem('attendsmart_user', JSON.stringify(user));
+            this.showToast(`Signed in as ${user.name}`, 'success');
+            this.showAppLayout();
+        } else {
+            alertBox.textContent = 'Invalid credentials. Default: admin / admin123 or faculty / faculty123';
+            alertBox.style.display = 'block';
+        }
+    }
+
+    logout() {
+        this.currentUser = null;
+        sessionStorage.removeItem('attendsmart_user');
+        localStorage.removeItem('attendsmart_user');
+        this.showToast('You have been logged out.', 'info');
+        this.showLoginScreen();
+    }
+
+    /* ------------------------------------------------------------------------
+       Backend Detection & Data Loading (Dual-Mode)
        ------------------------------------------------------------------------ */
     async detectBackend() {
         const badge = document.getElementById('backendStatusBadge');
         const text = document.getElementById('backendStatusText');
 
-        // Check if we can reach the Java API
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 1500);
@@ -48,7 +178,6 @@ class AttendanceApp {
                 return;
             }
         } catch (e) {
-            // Localhost fallback check if opening file directly
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 1200);
@@ -64,7 +193,6 @@ class AttendanceApp {
             } catch (err) {}
         }
 
-        // Running standalone (e.g. GitHub Pages or offline)
         this.isBackendConnected = false;
         badge.className = 'mode-badge demo';
         text.textContent = 'Live Web App (Local Storage)';
@@ -73,21 +201,30 @@ class AttendanceApp {
     async loadAllData() {
         if (this.isBackendConnected) {
             try {
-                const [studRes, courseRes, recRes] = await Promise.all([
+                const [studRes, courseRes, recRes, userRes, settRes] = await Promise.all([
                     fetch(`${this.apiBase}/api/students`).then(r => r.json()),
                     fetch(`${this.apiBase}/api/courses`).then(r => r.json()),
-                    fetch(`${this.apiBase}/api/attendance`).then(r => r.json())
+                    fetch(`${this.apiBase}/api/attendance`).then(r => r.json()),
+                    fetch(`${this.apiBase}/api/admin/users`).then(r => r.json()).catch(() => []),
+                    fetch(`${this.apiBase}/api/admin/settings`).then(r => r.json()).catch(() => ({}))
                 ]);
                 this.students = studRes;
                 this.courses = courseRes;
                 this.records = recRes;
+                if (userRes && userRes.length) this.users = userRes;
+                if (settRes && settRes.minAttendanceThreshold) {
+                    this.settings = {
+                        institutionName: settRes.institutionName || 'Apex Institute',
+                        minAttendanceThreshold: parseFloat(settRes.minAttendanceThreshold) || 75.0,
+                        academicTerm: settRes.academicTerm || 'Fall 2026'
+                    };
+                }
                 return;
             } catch (e) {
                 console.warn('Backend fetch failed, falling back to local storage', e);
             }
         }
 
-        // Local Storage Mode
         this.loadLocalData();
     }
 
@@ -95,13 +232,16 @@ class AttendanceApp {
         const storedStudents = localStorage.getItem('attendsmart_students');
         const storedCourses = localStorage.getItem('attendsmart_courses');
         const storedRecords = localStorage.getItem('attendsmart_records');
+        const storedUsers = localStorage.getItem('attendsmart_users');
+        const storedSettings = localStorage.getItem('attendsmart_settings');
 
         if (storedStudents && storedCourses && storedRecords) {
             this.students = JSON.parse(storedStudents);
             this.courses = JSON.parse(storedCourses);
             this.records = JSON.parse(storedRecords);
+            this.users = storedUsers ? JSON.parse(storedUsers) : [];
+            if (storedSettings) this.settings = JSON.parse(storedSettings);
         } else {
-            // Pre-seed sample realistic data for instant demonstration
             this.seedLocalData();
         }
     }
@@ -110,9 +250,25 @@ class AttendanceApp {
         localStorage.setItem('attendsmart_students', JSON.stringify(this.students));
         localStorage.setItem('attendsmart_courses', JSON.stringify(this.courses));
         localStorage.setItem('attendsmart_records', JSON.stringify(this.records));
+        localStorage.setItem('attendsmart_users', JSON.stringify(this.users));
+        localStorage.setItem('attendsmart_settings', JSON.stringify(this.settings));
     }
 
     seedLocalData() {
+        this.settings = {
+            institutionName: 'Apex Institute of Science & Technology',
+            minAttendanceThreshold: 75.0,
+            academicTerm: 'Academic Year 2026-27 (Fall Sem)'
+        };
+
+        this.users = [
+            { id: 'u1', username: 'admin', password: 'admin123', name: 'Dean of Academic Affairs', role: 'ADMIN', email: 'dean@college.edu', department: 'Administration' },
+            { id: 'u2', username: 'faculty', password: 'faculty123', name: 'Dr. Alan Turing', role: 'FACULTY', email: 'turing@college.edu', department: 'Computer Science' },
+            { id: 'u3', username: 'linus', password: 'faculty123', name: 'Prof. Linus Torvalds', role: 'FACULTY', email: 'linus@college.edu', department: 'Computer Science' },
+            { id: 'u4', username: 'radia', password: 'faculty123', name: 'Dr. Radia Perlman', role: 'FACULTY', email: 'radia@college.edu', department: 'Computer Science' },
+            { id: 'u5', username: 'margaret', password: 'faculty123', name: 'Prof. Margaret Hamilton', role: 'FACULTY', email: 'margaret@college.edu', department: 'Computer Science' }
+        ];
+
         this.courses = [
             { id: 'c1', code: 'CS301', name: 'Database Management Systems', department: 'Computer Science', faculty: 'Dr. Alan Turing' },
             { id: 'c2', code: 'CS302', name: 'Operating Systems', department: 'Computer Science', faculty: 'Prof. Linus Torvalds' },
@@ -142,7 +298,6 @@ class AttendanceApp {
         const today = new Date();
         let counter = 1;
 
-        // Generate realistic past sessions for each course
         this.courses.forEach(course => {
             for (let daysAgo = 10; daysAgo >= 0; daysAgo -= 2) {
                 const sessionDate = new Date(today);
@@ -154,9 +309,9 @@ class AttendanceApp {
                     const hash = Math.abs((student.rollNo + course.id + dateStr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0));
                     let status = 'PRESENT';
                     if (student.rollNo === 'CS-105' || student.rollNo === 'CS-111') {
-                        status = (hash % 3 === 0) ? 'PRESENT' : 'ABSENT'; // ~33% defaulter
+                        status = (hash % 3 === 0) ? 'PRESENT' : 'ABSENT';
                     } else if (student.rollNo === 'CS-108' || student.rollNo === 'CS-115') {
-                        status = (hash % 10 < 7) ? 'PRESENT' : 'ABSENT'; // ~70% borderline
+                        status = (hash % 10 < 7) ? 'PRESENT' : 'ABSENT';
                     } else {
                         if (hash % 12 === 0) status = 'ABSENT';
                         else if (hash % 15 === 0) status = 'LATE';
@@ -184,15 +339,13 @@ class AttendanceApp {
        UI Navigation & Events
        ------------------------------------------------------------------------ */
     initEventListeners() {
-        // Tab switching
         document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', () => {
                 const tab = btn.getAttribute('data-tab');
                 this.showTab(tab);
             });
         });
 
-        // Mobile drawer toggle
         const toggle = document.getElementById('mobileToggle');
         const sidebar = document.getElementById('sidebar');
         if (toggle && sidebar) {
@@ -205,10 +358,8 @@ class AttendanceApp {
     setupCurrentDate() {
         const now = new Date();
         const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
-        const formatted = now.toLocaleDateString('en-US', options);
-        document.getElementById('currentDateDisplay').textContent = formatted;
+        document.getElementById('currentDateDisplay').textContent = now.toLocaleDateString('en-US', options);
 
-        // Set attendance date picker to today
         const dateInput = document.getElementById('attendanceDateInput');
         if (dateInput) {
             dateInput.value = now.toISOString().split('T')[0];
@@ -224,35 +375,29 @@ class AttendanceApp {
             p.classList.toggle('active', p.id === `tab-${tabId}`);
         });
 
-        // Update Page Title
         const titleMap = {
             'dashboard': 'Dashboard Overview',
             'take-attendance': 'Take Student Attendance',
             'students': 'Student Directory',
-            'defaulters': 'Defaulter Alert (<75%)',
+            'defaulters': `Defaulters Alert (<${this.settings.minAttendanceThreshold}%)`,
             'reports': 'Attendance Reports & Analytics',
-            'courses': 'Course Roster'
+            'courses': 'Course Roster',
+            'admin-faculty': 'Faculty & Instructor Management',
+            'admin-settings': 'Institutional System Settings'
         };
         document.getElementById('pageTitle').textContent = titleMap[tabId] || 'Attendance System';
 
-        // Close mobile drawer if open
         const sidebar = document.getElementById('sidebar');
         if (sidebar) sidebar.classList.remove('open');
 
-        // Refresh relevant views
-        if (tabId === 'take-attendance') {
-            this.initAttendanceMarkingView();
-        } else if (tabId === 'students') {
-            this.renderStudentDirectory();
-        } else if (tabId === 'defaulters') {
-            this.renderDefaultersTable();
-        } else if (tabId === 'reports') {
-            this.renderReportTable();
-        } else if (tabId === 'courses') {
-            this.renderCoursesTable();
-        } else if (tabId === 'dashboard') {
-            this.renderDashboard();
-        }
+        if (tabId === 'take-attendance') this.initAttendanceMarkingView();
+        else if (tabId === 'students') this.renderStudentDirectory();
+        else if (tabId === 'defaulters') this.renderDefaultersTable();
+        else if (tabId === 'reports') this.renderReportTable();
+        else if (tabId === 'courses') this.renderCoursesTable();
+        else if (tabId === 'admin-faculty') this.renderAdminFacultyTable();
+        else if (tabId === 'admin-settings') this.renderAdminSettingsForm();
+        else if (tabId === 'dashboard') this.renderDashboard();
     }
 
     showTakeAttendanceTab() {
@@ -307,18 +452,18 @@ class AttendanceApp {
         });
     }
 
-    getDefaulters(threshold = 75.0, courseId = null) {
+    getDefaulters(threshold = null, courseId = null) {
+        if (threshold === null) threshold = this.settings.minAttendanceThreshold || 75.0;
         const defaulters = [];
         this.students.forEach(s => {
             const stats = this.getStudentStats(s.id, courseId);
             if (stats.total > 0 && stats.percentage < threshold) {
-                // Classes needed to reach 75%: (present + x)/(total + x) >= 0.75 => x >= (0.75*total - present)/0.25
-                const needed = Math.max(0, Math.ceil((0.75 * stats.total - stats.present) / 0.25));
+                const needed = Math.max(0, Math.ceil((threshold / 100 * stats.total - stats.present) / (1 - threshold / 100)));
                 defaulters.push({
                     student: s,
                     stats,
                     neededClasses: needed,
-                    severity: stats.percentage < 65.0 ? 'CRITICAL' : 'WARNING'
+                    severity: stats.percentage < (threshold - 10) ? 'CRITICAL' : 'WARNING'
                 });
             }
         });
@@ -326,7 +471,7 @@ class AttendanceApp {
     }
 
     /* ------------------------------------------------------------------------
-       Rendering: Dashboard
+       Rendering Views
        ------------------------------------------------------------------------ */
     renderAll() {
         this.populateCourseSelects();
@@ -334,10 +479,9 @@ class AttendanceApp {
     }
 
     renderDashboard() {
-        // Compute Overall Stats
         const totalStudents = this.students.length;
         const totalSessions = this.records.length;
-        const defaulters = this.getDefaulters(75.0);
+        const defaulters = this.getDefaulters();
 
         let totalMarks = 0;
         let totalPresent = 0;
@@ -354,14 +498,16 @@ class AttendanceApp {
         document.getElementById('statOverallRate').textContent = `${overallRate}%`;
         document.getElementById('statDefaulters').textContent = defaulters.length;
         document.getElementById('navDefaulterCount').textContent = defaulters.length;
+        document.getElementById('statThresholdSub').textContent = `Target: ${this.settings.minAttendanceThreshold}%+`;
+        document.getElementById('healthTermBadge').textContent = this.settings.academicTerm || 'Current Term';
 
-        // Render Course Health Bars
+        // Course Health
         const healthList = document.getElementById('courseHealthList');
         const courseHealth = this.getCourseHealth();
         healthList.innerHTML = courseHealth.map(item => {
             let colorClass = 'good';
             if (item.attendancePct < 65) colorClass = 'critical';
-            else if (item.attendancePct < 75) colorClass = 'warning';
+            else if (item.attendancePct < this.settings.minAttendanceThreshold) colorClass = 'warning';
 
             return `
                 <div class="course-health-item">
@@ -376,7 +522,7 @@ class AttendanceApp {
             `;
         }).join('');
 
-        // Render Recent Sessions
+        // Recent Sessions
         const recentBody = document.getElementById('recentSessionsTableBody');
         const sortedRecords = [...this.records].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
 
@@ -399,7 +545,7 @@ class AttendanceApp {
                     <td>${rec.timeSlot}</td>
                     <td><strong>${presentCount}</strong> / ${totalCount}</td>
                     <td>
-                        <span class="badge ${pct >= 75 ? 'badge-success' : 'badge-danger'}">${pct}%</span>
+                        <span class="badge ${pct >= this.settings.minAttendanceThreshold ? 'badge-success' : 'badge-danger'}">${pct}%</span>
                     </td>
                     <td>
                         <button class="btn btn-secondary btn-sm" onclick="app.loadSpecificSession('${rec.id}')">Edit</button>
@@ -419,7 +565,7 @@ class AttendanceApp {
     }
 
     /* ------------------------------------------------------------------------
-       Faculty Attendance Marking View (Fast & Efficient)
+       Attendance Taking
        ------------------------------------------------------------------------ */
     initAttendanceMarkingView() {
         this.populateCourseSelects();
@@ -434,7 +580,6 @@ class AttendanceApp {
         const courseId = document.getElementById('attendanceCourseSelect').value;
         const date = document.getElementById('attendanceDateInput').value;
 
-        // Check if a session already exists for this course and date
         const existing = this.records.find(r => r.courseId === courseId && r.date === date);
 
         this.currentAttendanceState = {};
@@ -444,7 +589,6 @@ class AttendanceApp {
             document.getElementById('attendanceTopicInput').value = existing.notes || '';
             this.showToast('Loaded existing attendance session for this date.', 'info');
         } else {
-            // Default: Mark all present to save faculty time!
             this.students.forEach(s => {
                 this.currentAttendanceState[s.id] = 'PRESENT';
             });
@@ -490,7 +634,7 @@ class AttendanceApp {
 
             let statusBadge = 'badge-success';
             if (stats.percentage < 65) statusBadge = 'badge-danger';
-            else if (stats.percentage < 75) statusBadge = 'badge-warning';
+            else if (stats.percentage < this.settings.minAttendanceThreshold) statusBadge = 'badge-warning';
 
             return `
                 <tr data-student-id="${student.id}">
@@ -527,15 +671,12 @@ class AttendanceApp {
 
     setStudentStatus(studentId, status) {
         this.currentAttendanceState[studentId] = status;
-        
-        // Update DOM row quickly without re-rendering entire table
         const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
         if (row) {
             row.querySelectorAll('.status-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.getAttribute('data-status') === status);
             });
         }
-
         this.updateAttendanceLiveCounters();
     }
 
@@ -618,11 +759,10 @@ class AttendanceApp {
                     return;
                 }
             } catch (e) {
-                console.error('API save error, saving locally:', e);
+                console.error('API save error:', e);
             }
         }
 
-        // Save locally
         const existingIndex = this.records.findIndex(r => r.courseId === courseId && r.date === date);
         if (existingIndex !== -1) {
             sessionRecord.id = this.records[existingIndex].id;
@@ -637,7 +777,7 @@ class AttendanceApp {
     }
 
     /* ------------------------------------------------------------------------
-       Students Directory Tab
+       Students Directory
        ------------------------------------------------------------------------ */
     renderStudentDirectory(filterQuery = '') {
         const tbody = document.getElementById('studentDirectoryBody');
@@ -656,12 +796,12 @@ class AttendanceApp {
         tbody.innerHTML = filtered.map(student => {
             const stats = this.getStudentStats(student.id);
             let badgeClass = 'badge-success';
-            let statusLabel = 'Eligible (>=75%)';
+            let statusLabel = `Eligible (>=${this.settings.minAttendanceThreshold}%)`;
 
             if (stats.percentage < 65) {
                 badgeClass = 'badge-danger';
                 statusLabel = 'Debarred (<65%)';
-            } else if (stats.percentage < 75) {
+            } else if (stats.percentage < this.settings.minAttendanceThreshold) {
                 badgeClass = 'badge-warning';
                 statusLabel = 'Shortage Warning';
             }
@@ -688,8 +828,7 @@ class AttendanceApp {
     }
 
     filterStudents() {
-        const q = document.getElementById('studentSearchInput').value;
-        this.renderStudentDirectory(q);
+        this.renderStudentDirectory(document.getElementById('studentSearchInput').value);
     }
 
     openAddStudentModal() {
@@ -705,14 +844,7 @@ class AttendanceApp {
         const department = document.getElementById('newDept').value.trim();
         const semester = parseInt(document.getElementById('newSem').value) || 5;
 
-        const newStudent = {
-            id: 's_' + Date.now().toString(36),
-            rollNo,
-            name,
-            email,
-            department,
-            semester
-        };
+        const newStudent = { id: 's_' + Date.now().toString(36), rollNo, name, email, department, semester };
 
         if (this.isBackendConnected) {
             try {
@@ -729,9 +861,7 @@ class AttendanceApp {
                     this.renderAll();
                     return;
                 }
-            } catch (err) {
-                console.error('Failed to post student to API:', err);
-            }
+            } catch (err) {}
         }
 
         this.students.push(newStudent);
@@ -757,10 +887,7 @@ class AttendanceApp {
         }
 
         this.students = this.students.filter(s => s.id !== studentId);
-        // Also remove from records
-        this.records.forEach(r => {
-            if (r.records) delete r.records[studentId];
-        });
+        this.records.forEach(r => { if (r.records) delete r.records[studentId]; });
         this.saveLocalData();
         this.showToast('Student deleted.', 'info');
         this.renderAll();
@@ -786,14 +913,14 @@ class AttendanceApp {
             </div>
             <div class="student-summary-item">
                 <span>Overall Percentage</span>
-                <strong class="${overallStats.percentage >= 75 ? 'text-success' : 'text-danger'}">${overallStats.percentage}%</strong>
+                <strong class="${overallStats.percentage >= this.settings.minAttendanceThreshold ? 'text-success' : 'text-danger'}">${overallStats.percentage}%</strong>
             </div>
         `;
 
         const coursesBody = document.getElementById('modalStudentCoursesBody');
         coursesBody.innerHTML = this.courses.map(c => {
             const cStats = this.getStudentStats(student.id, c.id);
-            const isEligible = cStats.percentage >= 75;
+            const isEligible = cStats.percentage >= this.settings.minAttendanceThreshold;
             return `
                 <tr>
                     <td><strong>${c.code}</strong> - ${c.name}</td>
@@ -812,15 +939,17 @@ class AttendanceApp {
     }
 
     /* ------------------------------------------------------------------------
-       Defaulters Alert (<75%) Tab
+       Defaulters Alert
        ------------------------------------------------------------------------ */
     renderDefaultersTable() {
         const tbody = document.getElementById('defaulterTableBody');
-        const defaulters = this.getDefaulters(75.0);
+        const threshold = this.settings.minAttendanceThreshold || 75.0;
+        document.getElementById('defaulterThresholdText').textContent = threshold;
+        const defaulters = this.getDefaulters(threshold);
 
         if (defaulters.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2.5rem; color: #10b981;">
-                <strong>All students meet the 75% attendance threshold! No defaulters.</strong>
+                <strong>All students meet the ${threshold}% attendance threshold! No defaulters.</strong>
             </td></tr>`;
             return;
         }
@@ -836,7 +965,7 @@ class AttendanceApp {
                     <td><strong class="text-danger">${d.stats.percentage}%</strong></td>
                     <td>
                         <span class="badge ${isCritical ? 'badge-danger' : 'badge-warning'}">
-                            ${isCritical ? 'CRITICAL (<65%)' : 'WARNING (<75%)'}
+                            ${isCritical ? 'CRITICAL (<65%)' : `WARNING (<${threshold}%)`}
                         </span>
                     </td>
                     <td>
@@ -848,31 +977,33 @@ class AttendanceApp {
     }
 
     copyDefaulterList() {
-        const defaulters = this.getDefaulters(75.0);
+        const threshold = this.settings.minAttendanceThreshold || 75.0;
+        const defaulters = this.getDefaulters(threshold);
         if (defaulters.length === 0) {
             this.showToast('No defaulters to copy.', 'info');
             return;
         }
 
-        let notice = `ATTENDANCE SHORTAGE NOTICE (<75%)\n`;
+        let notice = `ATTENDANCE SHORTAGE NOTICE (<${threshold}%)\n`;
+        notice += `Institution: ${this.settings.institutionName}\n`;
         notice += `Date: ${new Date().toLocaleDateString()}\n\n`;
-        notice += `The following students have fallen below the mandatory 75% attendance requirement for exam eligibility:\n\n`;
+        notice += `The following students have fallen below the mandatory ${threshold}% attendance requirement for exam eligibility:\n\n`;
 
         defaulters.forEach((d, idx) => {
             notice += `${idx + 1}. [${d.student.rollNo}] ${d.student.name} - ${d.stats.percentage}% (${d.stats.present}/${d.stats.total} classes attended)\n`;
-            notice += `   Required: Must attend next ${d.neededClasses} consecutive classes.\n`;
+            notice += `   Recovery Action: Must attend next ${d.neededClasses} consecutive classes.\n`;
         });
 
         navigator.clipboard.writeText(notice).then(() => {
             this.showToast('Notice text copied to clipboard!', 'success');
         }).catch(() => {
-            this.showToast('Failed to copy. Please copy manually.', 'danger');
+            this.showToast('Failed to copy.', 'danger');
         });
     }
 
     exportDefaultersCsv() {
-        const defaulters = this.getDefaulters(75.0);
-        let csv = 'Roll No,Student Name,Email,Attended,Total Classes,Attendance %,Severity,Classes Needed To Reach 75%\n';
+        const defaulters = this.getDefaulters();
+        let csv = 'Roll No,Student Name,Email,Attended,Total Classes,Attendance %,Severity,Classes Needed To Recover\n';
 
         defaulters.forEach(d => {
             csv += `"${d.student.rollNo}","${d.student.name}","${d.student.email}",${d.stats.present},${d.stats.total},${d.stats.percentage}%,${d.severity},${d.neededClasses}\n`;
@@ -882,7 +1013,7 @@ class AttendanceApp {
     }
 
     /* ------------------------------------------------------------------------
-       Reports & Export Tab
+       Reports & Export
        ------------------------------------------------------------------------ */
     renderReportTable() {
         const tbody = document.getElementById('reportTableBody');
@@ -890,7 +1021,7 @@ class AttendanceApp {
 
         tbody.innerHTML = this.students.map(student => {
             const stats = this.getStudentStats(student.id, courseId);
-            const isEligible = stats.percentage >= 75;
+            const isEligible = stats.percentage >= this.settings.minAttendanceThreshold;
 
             return `
                 <tr>
@@ -917,31 +1048,204 @@ class AttendanceApp {
         const course = this.courses.find(c => c.id === courseId);
         const courseTitle = course ? `${course.code} - ${course.name}` : 'All Courses';
 
-        let csv = `Student Attendance Report\n`;
+        let csv = `Student Attendance Official Report\n`;
+        csv += `Institution:,"${this.settings.institutionName}"\n`;
         csv += `Course:,"${courseTitle}"\n`;
         csv += `Generated On:,"${new Date().toLocaleString()}"\n\n`;
         csv += `Roll No,Student Name,Department,Total Classes,Attended,Absent,Late,Attendance %,Eligibility\n`;
 
         this.students.forEach(s => {
             const stats = this.getStudentStats(s.id, courseId);
-            const status = stats.percentage >= 75 ? 'ELIGIBLE' : (stats.percentage >= 65 ? 'WARNING (<75%)' : 'DEBARRED (<65%)');
+            const status = stats.percentage >= this.settings.minAttendanceThreshold ? 'ELIGIBLE' : (stats.percentage >= 65 ? 'WARNING (<75%)' : 'DEBARRED (<65%)');
             csv += `"${s.rollNo}","${s.name}","${s.department}",${stats.total},${stats.present},${stats.absent},${stats.late},${stats.percentage}%,"${status}"\n`;
         });
 
         this.downloadCsv(csv, `attendance_report_${course ? course.code : 'all'}_${new Date().toISOString().split('T')[0]}.csv`);
     }
 
-    downloadCsv(csvContent, fileName) {
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    /* ------------------------------------------------------------------------
+       ADMIN: Faculty Roster
+       ------------------------------------------------------------------------ */
+    renderAdminFacultyTable() {
+        const tbody = document.getElementById('adminFacultyTableBody');
+        if (!tbody) return;
+
+        if (this.users.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem;">No faculty registered yet.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = this.users.map(u => {
+            const assignedCourses = this.courses.filter(c => c.faculty && c.faculty.toLowerCase().includes(u.name.toLowerCase()));
+            const courseBadges = assignedCourses.length > 0 
+                ? assignedCourses.map(c => `<span class="roll-badge">${c.code}</span>`).join(' ')
+                : `<span class="text-muted">None</span>`;
+
+            const isRootAdmin = u.username.toLowerCase() === 'admin';
+
+            return `
+                <tr>
+                    <td><span class="roll-badge">${u.username}</span></td>
+                    <td><strong>${u.name}</strong></td>
+                    <td>${u.email}</td>
+                    <td>${u.department}</td>
+                    <td>
+                        <span class="badge ${u.role === 'ADMIN' ? 'badge-info' : 'badge-success'}">${u.role}</span>
+                    </td>
+                    <td>${courseBadges}</td>
+                    <td>
+                        ${isRootAdmin 
+                            ? `<span class="badge badge-secondary">Protected</span>` 
+                            : `<button class="btn btn-outline-danger btn-sm" onclick="app.deleteFaculty('${u.username}')">Remove</button>`
+                        }
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    openAddFacultyModal() {
+        document.getElementById('addFacultyForm').reset();
+        document.getElementById('addFacultyModal').classList.add('active');
+    }
+
+    async saveNewFaculty(e) {
+        e.preventDefault();
+        const username = document.getElementById('facultyUsername').value.trim();
+        const name = document.getElementById('facultyName').value.trim();
+        const email = document.getElementById('facultyEmail').value.trim();
+        const department = document.getElementById('facultyDept').value.trim();
+        const role = document.getElementById('facultyRole').value;
+        const password = document.getElementById('facultyPassword').value.trim() || 'faculty123';
+
+        const newFaculty = {
+            id: 'u_' + Date.now().toString(36),
+            username,
+            name,
+            email,
+            department,
+            role,
+            password
+        };
+
+        if (this.isBackendConnected) {
+            try {
+                const res = await fetch(`${this.apiBase}/api/admin/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newFaculty)
+                });
+                if (res.ok) {
+                    const saved = await res.json();
+                    this.users.push(saved);
+                    this.closeModal('addFacultyModal');
+                    this.showToast('Faculty member registered!', 'success');
+                    this.renderAdminFacultyTable();
+                    return;
+                }
+            } catch (err) {}
+        }
+
+        this.users.push(newFaculty);
+        this.saveLocalData();
+        this.closeModal('addFacultyModal');
+        this.showToast('Faculty member registered!', 'success');
+        this.renderAdminFacultyTable();
+    }
+
+    async deleteFaculty(username) {
+        if (!confirm(`Are you sure you want to remove faculty account: ${username}?`)) return;
+
+        if (this.isBackendConnected) {
+            try {
+                const res = await fetch(`${this.apiBase}/api/admin/users?username=${username}`, { method: 'DELETE' });
+                if (res.ok) {
+                    this.users = this.users.filter(u => u.username !== username);
+                    this.showToast('Faculty removed.', 'info');
+                    this.renderAdminFacultyTable();
+                    return;
+                }
+            } catch (err) {}
+        }
+
+        this.users = this.users.filter(u => u.username !== username);
+        this.saveLocalData();
+        this.showToast('Faculty removed.', 'info');
+        this.renderAdminFacultyTable();
+    }
+
+    /* ------------------------------------------------------------------------
+       ADMIN: System Settings & Database Management
+       ------------------------------------------------------------------------ */
+    renderAdminSettingsForm() {
+        document.getElementById('settingInstitutionName').value = this.settings.institutionName || 'Apex Institute';
+        document.getElementById('settingThreshold').value = this.settings.minAttendanceThreshold || 75;
+        document.getElementById('settingAcademicTerm').value = this.settings.academicTerm || 'Fall 2026';
+    }
+
+    async saveAdminSettings(e) {
+        e.preventDefault();
+        const instName = document.getElementById('settingInstitutionName').value.trim();
+        const threshold = parseFloat(document.getElementById('settingThreshold').value) || 75.0;
+        const term = document.getElementById('settingAcademicTerm').value.trim();
+
+        this.settings.institutionName = instName;
+        this.settings.minAttendanceThreshold = threshold;
+        this.settings.academicTerm = term;
+
+        if (this.isBackendConnected) {
+            try {
+                await fetch(`${this.apiBase}/api/admin/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        institutionName: instName,
+                        minAttendanceThreshold: threshold.toString(),
+                        academicTerm: term
+                    })
+                });
+            } catch (err) {}
+        }
+
+        this.saveLocalData();
+        this.showToast('Institutional settings updated!', 'success');
+        this.renderAll();
+    }
+
+    exportFullDatabaseJson() {
+        const fullBackup = {
+            institution: this.settings,
+            users: this.users,
+            courses: this.courses,
+            students: this.students,
+            records: this.records,
+            exportedAt: new Date().toISOString()
+        };
+        const jsonStr = JSON.stringify(fullBackup, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
         const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', fileName);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
+        link.href = URL.createObjectURL(blob);
+        link.download = `attendsmart_database_backup_${new Date().toISOString().split('T')[0]}.json`;
         link.click();
-        document.body.removeChild(link);
-        this.showToast(`Downloaded: ${fileName}`, 'success');
+        this.showToast('Database backup downloaded!', 'success');
+    }
+
+    async resetSystemData() {
+        if (!confirm('Warning: This will restore the database to default sample records. Continue?')) return;
+
+        if (this.isBackendConnected) {
+            try {
+                await fetch(`${this.apiBase}/api/admin/reset`, { method: 'POST' });
+                await this.loadAllData();
+                this.showToast('Database reset to defaults!', 'info');
+                this.renderAll();
+                return;
+            } catch (err) {}
+        }
+
+        this.seedLocalData();
+        this.showToast('Database reset to defaults!', 'info');
+        this.renderAll();
     }
 
     /* ------------------------------------------------------------------------
@@ -980,13 +1284,7 @@ class AttendanceApp {
         const department = document.getElementById('newCourseDept').value.trim();
         const faculty = document.getElementById('newCourseFaculty').value.trim();
 
-        const newCourse = {
-            id: 'c_' + Date.now().toString(36),
-            code,
-            name,
-            department,
-            faculty
-        };
+        const newCourse = { id: 'c_' + Date.now().toString(36), code, name, department, faculty };
 
         if (this.isBackendConnected) {
             try {
@@ -1020,19 +1318,26 @@ class AttendanceApp {
     }
 
     /* ------------------------------------------------------------------------
-       Modal & Toast Utilities
+       Utilities
        ------------------------------------------------------------------------ */
     closeModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
+    }
+
+    downloadCsv(csvContent, fileName) {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        this.showToast(`Downloaded: ${fileName}`, 'success');
     }
 
     showToast(message, type = 'info') {
         const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.innerHTML = `
-            <span>${message}</span>
-        `;
+        toast.innerHTML = `<span>${message}</span>`;
         container.appendChild(toast);
 
         setTimeout(() => {
@@ -1044,6 +1349,6 @@ class AttendanceApp {
     }
 }
 
-// Global instance
+// Instantiate global app
 const app = new AttendanceApp();
 window.app = app;

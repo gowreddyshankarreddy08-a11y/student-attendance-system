@@ -3,19 +3,49 @@ package com.attendance.service;
 import com.attendance.model.AttendanceRecord;
 import com.attendance.model.Course;
 import com.attendance.model.Student;
+import com.attendance.model.User;
 import com.attendance.storage.DataStore;
 
 import java.util.*;
 
 /**
  * Business logic service for Attendance analytics, stats calculation,
- * defaulter detection, and CSV export.
+ * defaulter detection, user authentication, admin actions, and CSV export.
  */
 public class AttendanceService {
     private final DataStore dataStore;
 
     public AttendanceService(DataStore dataStore) {
         this.dataStore = dataStore;
+    }
+
+    public User authenticate(String username, String password) {
+        return dataStore.authenticate(username, password);
+    }
+
+    public List<User> getAllUsers() {
+        return dataStore.getUsers();
+    }
+
+    public User addUser(User u) {
+        return dataStore.addUser(u);
+    }
+
+    public boolean deleteUser(String username) {
+        return dataStore.deleteUser(username);
+    }
+
+    public Map<String, String> getSettings() {
+        return dataStore.getSettings();
+    }
+
+    public void updateSettings(Map<String, String> settings) {
+        dataStore.updateSettings(settings);
+    }
+
+    public void resetToDefaultData() {
+        dataStore.seedSampleData();
+        dataStore.saveToFile();
     }
 
     public List<Student> getAllStudents() {
@@ -70,7 +100,7 @@ public class AttendanceService {
                         break;
                     case "LATE":
                         late++;
-                        present++; // Late is counted with present or partial
+                        present++;
                         break;
                     case "EXCUSED":
                         excused++;
@@ -96,7 +126,7 @@ public class AttendanceService {
     }
 
     /**
-     * Finds students whose overall attendance percentage is below the threshold (e.g. 75%).
+     * Finds students whose overall attendance percentage is below the threshold.
      */
     public List<Map<String, Object>> getDefaulters(double threshold, String courseId) {
         List<Student> students = dataStore.getStudents();
@@ -114,10 +144,9 @@ public class AttendanceService {
                 item.put("attended", summary.get("present"));
                 item.put("percentage", pct);
                 item.put("severity", pct < 65.0 ? "CRITICAL" : "WARNING");
-                // Classes needed to reach 75%
-                // (attended + x) / (total + x) >= 0.75  =>  x >= (0.75*total - attended) / 0.25
+                
                 int attended = (int) summary.get("present");
-                int needed = (int) Math.ceil(Math.max(0, (0.75 * total - attended) / 0.25));
+                int needed = (int) Math.ceil(Math.max(0, (threshold / 100.0 * total - attended) / (1.0 - threshold / 100.0)));
                 item.put("classesNeededToRecover", needed);
                 defaulters.add(item);
             }
@@ -128,12 +157,13 @@ public class AttendanceService {
     }
 
     /**
-     * Calculates overall system KPI stats for the faculty dashboard.
+     * Calculates overall system KPI stats for dashboard.
      */
     public Map<String, Object> getOverallStats() {
         List<Student> students = dataStore.getStudents();
         List<Course> courses = dataStore.getCourses();
         List<AttendanceRecord> records = dataStore.getRecords();
+        List<User> users = dataStore.getUsers();
 
         long totalMarkings = 0;
         long totalPresent = 0;
@@ -148,27 +178,36 @@ public class AttendanceService {
         }
 
         double overallRate = (totalMarkings == 0) ? 0.0 : ((double) totalPresent / totalMarkings) * 100.0;
-        List<Map<String, Object>> defaulters = getDefaulters(75.0, null);
+        
+        double threshold = 75.0;
+        try {
+            threshold = Double.parseDouble(dataStore.getSettings().getOrDefault("minAttendanceThreshold", "75.0"));
+        } catch (Exception ignored) {}
+        
+        List<Map<String, Object>> defaulters = getDefaulters(threshold, null);
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalStudents", students.size());
         stats.put("totalCourses", courses.size());
         stats.put("totalSessions", records.size());
+        stats.put("totalFaculty", users.stream().filter(u -> "FACULTY".equalsIgnoreCase(u.getRole())).count());
         stats.put("overallAttendanceRate", Math.round(overallRate * 10.0) / 10.0);
         stats.put("defaulterCount", defaulters.size());
+        stats.put("settings", dataStore.getSettings());
 
         return stats;
     }
 
     /**
-     * Generates a comprehensive CSV export report for faculty.
+     * Generates a comprehensive CSV export report for faculty/administration.
      */
     public String generateCsvReport(String courseId) {
         StringBuilder csv = new StringBuilder();
         Course c = (courseId != null && !courseId.isEmpty()) ? dataStore.getCourse(courseId) : null;
         String courseTitle = (c != null) ? c.getCode() + " - " + c.getName() : "All Courses";
 
-        csv.append("Student Attendance Report\n");
+        csv.append("Student Attendance Official Report\n");
+        csv.append("Institution:,\"").append(dataStore.getSettings().getOrDefault("institutionName", "Apex University")).append("\"\n");
         csv.append("Course:,\"").append(courseTitle).append("\"\n");
         csv.append("Generated On:,\"").append(new Date()).append("\"\n\n");
 

@@ -3,6 +3,7 @@ package com.attendance.storage;
 import com.attendance.model.AttendanceRecord;
 import com.attendance.model.Course;
 import com.attendance.model.Student;
+import com.attendance.model.User;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,8 @@ public class DataStore {
     private final Map<String, Student> students = new ConcurrentHashMap<>();
     private final Map<String, Course> courses = new ConcurrentHashMap<>();
     private final Map<String, AttendanceRecord> records = new ConcurrentHashMap<>();
+    private final Map<String, User> users = new ConcurrentHashMap<>();
+    private final Map<String, String> settings = new ConcurrentHashMap<>();
 
     public DataStore(String dataDirPath) {
         this.filePath = Paths.get(dataDirPath, "attendance_database.json");
@@ -49,8 +52,28 @@ public class DataStore {
         students.clear();
         courses.clear();
         records.clear();
+        users.clear();
+        settings.clear();
 
-        // 1. Seed Courses
+        // 0. Default Settings
+        settings.put("institutionName", "Apex Institute of Science & Technology");
+        settings.put("minAttendanceThreshold", "75.0");
+        settings.put("academicTerm", "Academic Year 2026-27 (Fall Sem)");
+
+        // 1. Seed Users (Admin & Faculty)
+        User admin = new User("u1", "admin", "admin123", "Dean of Academic Affairs", "ADMIN", "dean@college.edu", "Administration");
+        User f1 = new User("u2", "faculty", "faculty123", "Dr. Alan Turing", "FACULTY", "turing@college.edu", "Computer Science");
+        User f2 = new User("u3", "linus", "faculty123", "Prof. Linus Torvalds", "FACULTY", "linus@college.edu", "Computer Science");
+        User f3 = new User("u4", "radia", "faculty123", "Dr. Radia Perlman", "FACULTY", "radia@college.edu", "Computer Science");
+        User f4 = new User("u5", "margaret", "faculty123", "Prof. Margaret Hamilton", "FACULTY", "margaret@college.edu", "Computer Science");
+
+        users.put(admin.getUsername(), admin);
+        users.put(f1.getUsername(), f1);
+        users.put(f2.getUsername(), f2);
+        users.put(f3.getUsername(), f3);
+        users.put(f4.getUsername(), f4);
+
+        // 2. Seed Courses
         Course c1 = new Course("c1", "CS301", "Database Management Systems", "Computer Science", "Dr. Alan Turing");
         Course c2 = new Course("c2", "CS302", "Operating Systems", "Computer Science", "Prof. Linus Torvalds");
         Course c3 = new Course("c3", "CS303", "Computer Networks", "Computer Science", "Dr. Radia Perlman");
@@ -61,7 +84,7 @@ public class DataStore {
         courses.put(c3.getId(), c3);
         courses.put(c4.getId(), c4);
 
-        // 2. Seed Students
+        // 3. Seed Students
         String[][] studentData = {
             {"s1", "CS-101", "Aarav Sharma", "aarav.sharma@college.edu", "Computer Science", "5"},
             {"s2", "CS-102", "Aditi Patel", "aditi.patel@college.edu", "Computer Science", "5"},
@@ -85,7 +108,7 @@ public class DataStore {
             students.put(s.getId(), s);
         }
 
-        // 3. Seed Past 6 Attendance Sessions for each course
+        // 4. Seed Past 6 Attendance Sessions for each course
         LocalDate today = LocalDate.now();
         int recordCounter = 1;
 
@@ -101,16 +124,14 @@ public class DataStore {
                     "Lecture: " + c.getName() + " - Unit " + ((daysAgo % 3) + 1)
                 );
 
-                // Simulate realistic attendance
                 for (Student s : students.values()) {
                     String status = "PRESENT";
                     int rollHash = Math.abs((s.getRollNo() + c.getId() + date).hashCode());
 
-                    // Specific students intentionally have low attendance to test Defaulter warnings
                     if (s.getRollNo().equals("CS-105") || s.getRollNo().equals("CS-111")) {
-                        status = (rollHash % 3 == 0) ? "PRESENT" : "ABSENT"; // ~33% attendance
+                        status = (rollHash % 3 == 0) ? "PRESENT" : "ABSENT";
                     } else if (s.getRollNo().equals("CS-108") || s.getRollNo().equals("CS-115")) {
-                        status = (rollHash % 10 < 7) ? "PRESENT" : "ABSENT"; // ~70% (borderline)
+                        status = (rollHash % 10 < 7) ? "PRESENT" : "ABSENT";
                     } else {
                         if (rollHash % 12 == 0) status = "ABSENT";
                         else if (rollHash % 15 == 0) status = "LATE";
@@ -127,6 +148,31 @@ public class DataStore {
         try {
             StringBuilder sb = new StringBuilder();
             sb.append("{\n");
+
+            // Settings
+            sb.append("  \"settings\": {\n");
+            int sCount = 0;
+            for (Map.Entry<String, String> entry : settings.entrySet()) {
+                if (sCount > 0) sb.append(",\n");
+                sb.append(String.format("    \"%s\": \"%s\"", escape(entry.getKey()), escape(entry.getValue())));
+                sCount++;
+            }
+            sb.append("\n  },\n");
+
+            // Users
+            sb.append("  \"users\": [\n");
+            List<User> userList = new ArrayList<>(users.values());
+            for (int i = 0; i < userList.size(); i++) {
+                User u = userList.get(i);
+                sb.append(String.format(
+                    "    {\"id\":\"%s\",\"username\":\"%s\",\"password\":\"%s\",\"name\":\"%s\",\"role\":\"%s\",\"email\":\"%s\",\"department\":\"%s\"}",
+                    escape(u.getId()), escape(u.getUsername()), escape(u.getPassword()), escape(u.getName()),
+                    escape(u.getRole()), escape(u.getEmail()), escape(u.getDepartment())
+                ));
+                if (i < userList.size() - 1) sb.append(",");
+                sb.append("\n");
+            }
+            sb.append("  ],\n");
 
             // Students
             sb.append("  \"students\": [\n");
@@ -172,6 +218,22 @@ public class DataStore {
                 seedSampleData();
                 saveToFile();
                 return;
+            }
+
+            // Extract users
+            Pattern uPattern = Pattern.compile("\\{\"id\":\"([^\"]+)\",\"username\":\"([^\"]+)\",\"password\":\"([^\"]+)\",\"name\":\"([^\"]+)\",\"role\":\"([^\"]+)\",\"email\":\"([^\"]+)\",\"department\":\"([^\"]+)\"\\}");
+            Matcher uMatcher = uPattern.matcher(content);
+            while (uMatcher.find()) {
+                User u = new User(
+                    uMatcher.group(1),
+                    uMatcher.group(2),
+                    uMatcher.group(3),
+                    uMatcher.group(4),
+                    uMatcher.group(5),
+                    uMatcher.group(6),
+                    uMatcher.group(7)
+                );
+                users.put(u.getUsername(), u);
             }
 
             // Extract students
@@ -226,15 +288,62 @@ public class DataStore {
                 records.put(r.getId(), r);
             }
 
-            if (students.isEmpty() || courses.isEmpty()) {
+            // If users or courses are missing, reseed
+            if (users.isEmpty() || courses.isEmpty() || students.isEmpty()) {
                 seedSampleData();
                 saveToFile();
             }
         } catch (Exception e) {
-            System.err.println("[DataStore] Parse error: " + e.getMessage() + ". Reseeding.");
+            System.err.println("[DataStore] Parse error: " + e.getMessage() + ". Reseeding defaults.");
             seedSampleData();
             saveToFile();
         }
+    }
+
+    public User authenticate(String username, String password) {
+        if (username == null || password == null) return null;
+        User u = users.get(username.trim());
+        if (u != null && u.getPassword().equals(password.trim())) {
+            return u;
+        }
+        return null;
+    }
+
+    public List<User> getUsers() {
+        return new ArrayList<>(users.values());
+    }
+
+    public synchronized User addUser(User u) {
+        if (u.getId() == null || u.getId().isEmpty()) {
+            u.setId("u_" + UUID.randomUUID().toString().substring(0, 8));
+        }
+        if (u.getPassword() == null || u.getPassword().isEmpty()) {
+            u.setPassword("faculty123");
+        }
+        users.put(u.getUsername(), u);
+        saveToFile();
+        return u;
+    }
+
+    public synchronized boolean deleteUser(String username) {
+        if ("admin".equalsIgnoreCase(username)) {
+            return false; // Prevent deleting root admin
+        }
+        User removed = users.remove(username);
+        if (removed != null) {
+            saveToFile();
+            return true;
+        }
+        return false;
+    }
+
+    public Map<String, String> getSettings() {
+        return new HashMap<>(settings);
+    }
+
+    public synchronized void updateSettings(Map<String, String> newSettings) {
+        settings.putAll(newSettings);
+        saveToFile();
     }
 
     public List<Student> getStudents() {
@@ -259,7 +368,6 @@ public class DataStore {
     public synchronized boolean deleteStudent(String id) {
         Student removed = students.remove(id);
         if (removed != null) {
-            // Also clean from records
             for (AttendanceRecord rec : records.values()) {
                 rec.getRecords().remove(id);
             }
@@ -296,7 +404,6 @@ public class DataStore {
 
     public synchronized AttendanceRecord saveRecord(AttendanceRecord rec) {
         if (rec.getId() == null || rec.getId().trim().isEmpty()) {
-            // Check if there's an existing record for the same course and date to update
             for (AttendanceRecord existing : records.values()) {
                 if (existing.getCourseId().equals(rec.getCourseId()) && existing.getDate().equals(rec.getDate())) {
                     rec.setId(existing.getId());
@@ -310,5 +417,10 @@ public class DataStore {
         records.put(rec.getId(), rec);
         saveToFile();
         return rec;
+    }
+
+    private static String escape(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
     }
 }
