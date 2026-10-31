@@ -28,29 +28,25 @@
                 <p id="loginInstitutionTag">Student Attendance Management System</p>
             </div>
 
-            <!-- Role Quick Pick Pills -->
-            <div class="quick-login-strip">
-                <span class="quick-title">Quick Demo Login:</span>
-                <div class="quick-buttons">
-                    <button type="button" class="btn-pill admin-pill" onclick="app.quickLogin('admin')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                        Admin Panel
-                    </button>
-                    <button type="button" class="btn-pill faculty-pill" onclick="app.quickLogin('faculty')">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        Faculty Portal
-                    </button>
-                </div>
+            <!-- Auth Tab Switcher -->
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab-btn active" id="tabBtnSignIn" onclick="app.switchAuthTab('signin')">
+                    Sign In
+                </button>
+                <button type="button" class="auth-tab-btn" id="tabBtnSignUp" onclick="app.switchAuthTab('signup')">
+                    Create Account
+                </button>
             </div>
 
+            <!-- 1. SIGN IN FORM -->
             <form id="loginForm" onsubmit="app.handleLoginFormSubmit(event)" class="login-form">
                 <div id="loginAlert" class="alert-box alert-error" style="display: none;"></div>
 
                 <div class="form-group">
-                    <label for="loginUsername">Username / ID</label>
+                    <label for="loginUsername">Username</label>
                     <div class="input-with-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                        <input type="text" id="loginUsername" class="form-control" placeholder="admin or faculty" required autocomplete="username">
+                        <input type="text" id="loginUsername" class="form-control" placeholder="Enter your username" required autocomplete="username">
                     </div>
                 </div>
 
@@ -58,21 +54,67 @@
                     <label for="loginPassword">Password</label>
                     <div class="input-with-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        <input type="password" id="loginPassword" class="form-control" placeholder="admin123 or faculty123" required autocomplete="current-password">
+                        <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password" required autocomplete="current-password">
                     </div>
                 </div>
 
                 <button type="submit" id="loginSubmitBtn" class="btn btn-primary btn-block btn-lg">
-                    <span>Sign In to Portal</span>
+                    <span>Sign In</span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </button>
+
+                <div class="auth-switch-link">
+                    <span>New faculty or administrator? <a href="javascript:void(0)" onclick="app.switchAuthTab('signup')">Create an account</a></span>
+                </div>
             </form>
 
-            <div class="login-footer">
-                <div class="credentials-hint">
-                    <small>Default Credentials: <strong>admin</strong> / <code>admin123</code> &bull; <strong>faculty</strong> / <code>faculty123</code></small>
+            <!-- 2. SIGN UP / REGISTER FORM -->
+            <form id="signupForm" onsubmit="app.handleSignupFormSubmit(event)" class="login-form" style="display: none;">
+                <div id="signupAlert" class="alert-box alert-error" style="display: none;"></div>
+
+                <div class="form-group">
+                    <label for="signupName">Full Name *</label>
+                    <input type="text" id="signupName" class="form-control" placeholder="e.g. Dr. Jane Smith" required>
                 </div>
-            </div>
+
+                <div class="form-group">
+                    <label for="signupEmail">Email Address *</label>
+                    <input type="email" id="signupEmail" class="form-control" placeholder="e.g. jsmith@institution.edu" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="signupDept">Department</label>
+                        <input type="text" id="signupDept" class="form-control" placeholder="e.g. Computer Science" value="Computer Science">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupRole">Account Role</label>
+                        <select id="signupRole" class="form-control">
+                            <option value="FACULTY">Faculty / Instructor</option>
+                            <option value="ADMIN">Administrator</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="signupUsername">Username *</label>
+                    <input type="text" id="signupUsername" class="form-control" placeholder="Choose a username" required autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="signupPassword">Password *</label>
+                    <input type="password" id="signupPassword" class="form-control" placeholder="Create a secure password" required autocomplete="new-password">
+                </div>
+
+                <button type="submit" id="signupSubmitBtn" class="btn btn-primary btn-block btn-lg">
+                    <span>Create Account & Sign In</span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </button>
+
+                <div class="auth-switch-link">
+                    <span>Already have an account? <a href="javascript:void(0)" onclick="app.switchAuthTab('signin')">Sign In here</a></span>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -748,12 +790,23 @@
                                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1rem 0;">
                                 <div class="action-row">
                                     <div>
-                                        <strong>Reset Database to Sample Defaults</strong>
-                                        <p class="sub-text">Restores sample student records, courses, and attendance logs for demonstration.</p>
+                                        <strong>Clear All Data (Clean Slate)</strong>
+                                        <p class="sub-text">Clears all students, courses, and attendance records to start completely fresh.</p>
                                     </div>
                                     <button type="button" class="btn btn-outline-danger" onclick="app.resetSystemData()">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.2"/></svg>
-                                        Reset to Sample Data
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        Clear Database
+                                    </button>
+                                </div>
+                                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1rem 0;">
+                                <div class="action-row">
+                                    <div>
+                                        <strong>Load Demo Sample Data (Optional)</strong>
+                                        <p class="sub-text">Loads a small set of demonstration courses and students for feature testing.</p>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary" onclick="app.loadDemoData()">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        Load Demo Data
                                     </button>
                                 </div>
                             </div>

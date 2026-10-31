@@ -90,15 +90,28 @@ class AttendanceApp {
         this.renderAll();
     }
 
-    quickLogin(role) {
-        if (role === 'admin') {
-            document.getElementById('loginUsername').value = 'admin';
-            document.getElementById('loginPassword').value = 'admin123';
+    switchAuthTab(tab) {
+        const btnSignIn = document.getElementById('tabBtnSignIn');
+        const btnSignUp = document.getElementById('tabBtnSignUp');
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const loginAlert = document.getElementById('loginAlert');
+        const signupAlert = document.getElementById('signupAlert');
+
+        if (loginAlert) loginAlert.style.display = 'none';
+        if (signupAlert) signupAlert.style.display = 'none';
+
+        if (tab === 'signup') {
+            btnSignUp.classList.add('active');
+            btnSignIn.classList.remove('active');
+            loginForm.style.display = 'none';
+            signupForm.style.display = 'flex';
         } else {
-            document.getElementById('loginUsername').value = 'faculty';
-            document.getElementById('loginPassword').value = 'faculty123';
+            btnSignIn.classList.add('active');
+            btnSignUp.classList.remove('active');
+            loginForm.style.display = 'flex';
+            signupForm.style.display = 'none';
         }
-        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
     }
 
     async handleLoginFormSubmit(e) {
@@ -127,7 +140,7 @@ class AttendanceApp {
                     }
                 } else {
                     const data = await res.json().catch(() => ({}));
-                    alertBox.textContent = data.error || 'Invalid credentials. Please verify username and password.';
+                    alertBox.textContent = data.error || 'Invalid credentials. Please verify your username and password.';
                     alertBox.style.display = 'block';
                     return;
                 }
@@ -136,7 +149,7 @@ class AttendanceApp {
             }
         }
 
-        // Local Storage / Standalone Fallback
+        // Local Storage / Client Fallback
         const user = this.users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
         if (user) {
             this.currentUser = user;
@@ -144,9 +157,80 @@ class AttendanceApp {
             this.showToast(`Signed in as ${user.name}`, 'success');
             this.showAppLayout();
         } else {
-            alertBox.textContent = 'Invalid credentials. Default: admin / admin123 or faculty / faculty123';
+            alertBox.textContent = 'Invalid username or password. Please verify your credentials.';
             alertBox.style.display = 'block';
         }
+    }
+
+    async handleSignupFormSubmit(e) {
+        e.preventDefault();
+        const name = document.getElementById('signupName').value.trim();
+        const email = document.getElementById('signupEmail').value.trim();
+        const department = document.getElementById('signupDept').value.trim();
+        const role = document.getElementById('signupRole').value;
+        const username = document.getElementById('signupUsername').value.trim();
+        const password = document.getElementById('signupPassword').value.trim();
+        const alertBox = document.getElementById('signupAlert');
+        alertBox.style.display = 'none';
+
+        if (!name || !username || !password) {
+            alertBox.textContent = 'Please fill out all required fields.';
+            alertBox.style.display = 'block';
+            return;
+        }
+
+        if (this.isBackendConnected) {
+            try {
+                const res = await fetch(`${this.apiBase}/api/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, department, role, username, password })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.user) {
+                        this.currentUser = data.user;
+                        sessionStorage.setItem('attendsmart_user', JSON.stringify(data.user));
+                        this.showToast(`Account created! Welcome, ${data.user.name}!`, 'success');
+                        this.showAppLayout();
+                        return;
+                    }
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    alertBox.textContent = data.error || 'Sign up failed. Username may already be taken.';
+                    alertBox.style.display = 'block';
+                    return;
+                }
+            } catch (err) {
+                console.warn('Backend signup error:', err);
+            }
+        }
+
+        // Local Storage Fallback
+        const exists = this.users.some(u => u.username.toLowerCase() === username.toLowerCase());
+        if (exists) {
+            alertBox.textContent = 'Username already exists. Please choose a different username.';
+            alertBox.style.display = 'block';
+            return;
+        }
+
+        const newUser = {
+            id: 'u_' + Date.now().toString(36),
+            username,
+            password,
+            name,
+            email,
+            department: department || 'General',
+            role: role || 'FACULTY'
+        };
+
+        this.users.push(newUser);
+        this.saveLocalData();
+        this.currentUser = newUser;
+        sessionStorage.setItem('attendsmart_user', JSON.stringify(newUser));
+        this.showToast(`Account created! Welcome, ${newUser.name}!`, 'success');
+        this.showAppLayout();
     }
 
     logout() {
@@ -235,15 +319,29 @@ class AttendanceApp {
         const storedUsers = localStorage.getItem('attendsmart_users');
         const storedSettings = localStorage.getItem('attendsmart_settings');
 
-        if (storedStudents && storedCourses && storedRecords) {
-            this.students = JSON.parse(storedStudents);
-            this.courses = JSON.parse(storedCourses);
-            this.records = JSON.parse(storedRecords);
-            this.users = storedUsers ? JSON.parse(storedUsers) : [];
-            if (storedSettings) this.settings = JSON.parse(storedSettings);
+        if (storedUsers) {
+            try {
+                const users = JSON.parse(storedUsers);
+                const adminUser = users.find(u => u.username && u.username.toLowerCase() === 'admin');
+                // Ensure admin password is updated to Admin@123
+                if (!adminUser || adminUser.password !== 'Admin@123') {
+                    this.seedLocalData();
+                    return;
+                }
+            } catch (e) {
+                this.seedLocalData();
+                return;
+            }
         } else {
             this.seedLocalData();
+            return;
         }
+
+        this.students = storedStudents ? JSON.parse(storedStudents) : [];
+        this.courses = storedCourses ? JSON.parse(storedCourses) : [];
+        this.records = storedRecords ? JSON.parse(storedRecords) : [];
+        this.users = storedUsers ? JSON.parse(storedUsers) : [];
+        if (storedSettings) this.settings = JSON.parse(storedSettings);
     }
 
     saveLocalData() {
@@ -258,81 +356,53 @@ class AttendanceApp {
         this.settings = {
             institutionName: 'Apex Institute of Science & Technology',
             minAttendanceThreshold: 75.0,
-            academicTerm: 'Academic Year 2026-27 (Fall Sem)'
+            academicTerm: 'Academic Year 2026-27'
         };
 
+        // Root Administrator: admin / Admin@123
         this.users = [
-            { id: 'u1', username: 'admin', password: 'admin123', name: 'Dean of Academic Affairs', role: 'ADMIN', email: 'dean@college.edu', department: 'Administration' },
-            { id: 'u2', username: 'faculty', password: 'faculty123', name: 'Dr. Alan Turing', role: 'FACULTY', email: 'turing@college.edu', department: 'Computer Science' },
-            { id: 'u3', username: 'linus', password: 'faculty123', name: 'Prof. Linus Torvalds', role: 'FACULTY', email: 'linus@college.edu', department: 'Computer Science' },
-            { id: 'u4', username: 'radia', password: 'faculty123', name: 'Dr. Radia Perlman', role: 'FACULTY', email: 'radia@college.edu', department: 'Computer Science' },
-            { id: 'u5', username: 'margaret', password: 'faculty123', name: 'Prof. Margaret Hamilton', role: 'FACULTY', email: 'margaret@college.edu', department: 'Computer Science' }
+            { id: 'u_admin', username: 'admin', password: 'Admin@123', name: 'System Administrator', role: 'ADMIN', email: 'admin@institution.edu', department: 'Administration' }
         ];
 
+        // Clean initial state: zero dummy students, courses, or records
+        this.courses = [];
+        this.students = [];
+        this.records = [];
+
+        this.saveLocalData();
+    }
+
+    async loadDemoData() {
+        if (!confirm('Load demonstration sample courses and students?')) return;
+
+        if (this.isBackendConnected) {
+            try {
+                await fetch(`${this.apiBase}/api/admin/demo-data`, { method: 'POST' });
+                await this.loadAllData();
+                this.showToast('Demo data loaded successfully.', 'info');
+                this.renderAll();
+                return;
+            } catch (err) {}
+        }
+
+        // Local storage demo data
         this.courses = [
-            { id: 'c1', code: 'CS301', name: 'Database Management Systems', department: 'Computer Science', faculty: 'Dr. Alan Turing' },
-            { id: 'c2', code: 'CS302', name: 'Operating Systems', department: 'Computer Science', faculty: 'Prof. Linus Torvalds' },
-            { id: 'c3', code: 'CS303', name: 'Computer Networks', department: 'Computer Science', faculty: 'Dr. Radia Perlman' },
-            { id: 'c4', code: 'CS304', name: 'Software Engineering', department: 'Computer Science', faculty: 'Prof. Margaret Hamilton' }
+            { id: 'c1', code: 'CS301', name: 'Database Management Systems', department: 'Computer Science', faculty: 'Dr. Jane Smith' },
+            { id: 'c2', code: 'CS302', name: 'Operating Systems', department: 'Computer Science', faculty: 'Prof. Alan Brown' }
         ];
 
         this.students = [
-            { id: 's1', rollNo: 'CS-101', name: 'Aarav Sharma', email: 'aarav.sharma@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's2', rollNo: 'CS-102', name: 'Aditi Patel', email: 'aditi.patel@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's3', rollNo: 'CS-103', name: 'Bhavani Shankar', email: 'bhavani.shankar@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's4', rollNo: 'CS-104', name: 'Devika Nambiar', email: 'devika.n@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's5', rollNo: 'CS-105', name: 'Ishaan Verma', email: 'ishaan.verma@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's6', rollNo: 'CS-106', name: 'Kavya Subramanian', email: 'kavya.s@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's7', rollNo: 'CS-107', name: 'Manish Reddy', email: 'manish.reddy@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's8', rollNo: 'CS-108', name: 'Neha Gupta', email: 'neha.gupta@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's9', rollNo: 'CS-109', name: 'Pranav Rao', email: 'pranav.rao@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's10', rollNo: 'CS-110', name: 'Pooja Hegde', email: 'pooja.hegde@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's11', rollNo: 'CS-111', name: 'Rahul Nair', email: 'rahul.nair@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's12', rollNo: 'CS-112', name: 'Riya Sen', email: 'riya.sen@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's13', rollNo: 'CS-113', name: 'Siddharth Joshi', email: 'siddharth.j@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's14', rollNo: 'CS-114', name: 'Tanvi Kulkarni', email: 'tanvi.k@college.edu', department: 'Computer Science', semester: 5 },
-            { id: 's15', rollNo: 'CS-115', name: 'Vikram Rathore', email: 'vikram.r@college.edu', department: 'Computer Science', semester: 5 }
+            { id: 's1', rollNo: 'CS-101', name: 'Aarav Sharma', email: 'aarav@institution.edu', department: 'Computer Science', semester: 5 },
+            { id: 's2', rollNo: 'CS-102', name: 'Aditi Patel', email: 'aditi@institution.edu', department: 'Computer Science', semester: 5 },
+            { id: 's3', rollNo: 'CS-103', name: 'Bhavani Shankar', email: 'bhavani@institution.edu', department: 'Computer Science', semester: 5 },
+            { id: 's4', rollNo: 'CS-104', name: 'Devika Nambiar', email: 'devika@institution.edu', department: 'Computer Science', semester: 5 },
+            { id: 's5', rollNo: 'CS-105', name: 'Ishaan Verma', email: 'ishaan@institution.edu', department: 'Computer Science', semester: 5 }
         ];
 
         this.records = [];
-        const today = new Date();
-        let counter = 1;
-
-        this.courses.forEach(course => {
-            for (let daysAgo = 10; daysAgo >= 0; daysAgo -= 2) {
-                const sessionDate = new Date(today);
-                sessionDate.setDate(today.getDate() - daysAgo);
-                const dateStr = sessionDate.toISOString().split('T')[0];
-
-                const recordMap = {};
-                this.students.forEach(student => {
-                    const hash = Math.abs((student.rollNo + course.id + dateStr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0));
-                    let status = 'PRESENT';
-                    if (student.rollNo === 'CS-105' || student.rollNo === 'CS-111') {
-                        status = (hash % 3 === 0) ? 'PRESENT' : 'ABSENT';
-                    } else if (student.rollNo === 'CS-108' || student.rollNo === 'CS-115') {
-                        status = (hash % 10 < 7) ? 'PRESENT' : 'ABSENT';
-                    } else {
-                        if (hash % 12 === 0) status = 'ABSENT';
-                        else if (hash % 15 === 0) status = 'LATE';
-                        else status = 'PRESENT';
-                    }
-                    recordMap[student.id] = status;
-                });
-
-                this.records.push({
-                    id: 'rec_' + (counter++),
-                    courseId: course.id,
-                    date: dateStr,
-                    timeSlot: '09:00 AM - 10:00 AM',
-                    notes: `Lecture: ${course.name} - Unit ${(daysAgo % 3) + 1}`,
-                    timestamp: sessionDate.getTime(),
-                    records: recordMap
-                });
-            }
-        });
-
         this.saveLocalData();
+        this.showToast('Demo courses and students loaded.', 'info');
+        this.renderAll();
     }
 
     /* ------------------------------------------------------------------------
@@ -504,30 +574,39 @@ class AttendanceApp {
         // Course Health
         const healthList = document.getElementById('courseHealthList');
         const courseHealth = this.getCourseHealth();
-        healthList.innerHTML = courseHealth.map(item => {
-            let colorClass = 'good';
-            if (item.attendancePct < 65) colorClass = 'critical';
-            else if (item.attendancePct < this.settings.minAttendanceThreshold) colorClass = 'warning';
-
-            return `
-                <div class="course-health-item">
-                    <div class="health-header">
-                        <span><strong>${item.course.code}:</strong> ${item.course.name}</span>
-                        <span><strong>${item.attendancePct}%</strong> (${item.sessions} sessions)</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-bar ${colorClass}" style="width: ${item.attendancePct}%;"></div>
-                    </div>
+        if (courseHealth.length === 0) {
+            healthList.innerHTML = `
+                <div class="empty-state-card" style="padding: 1.75rem 1rem;">
+                    <p class="empty-state-desc" style="margin-bottom: 0.75rem;">No courses registered yet. Create your courses to monitor attendance health.</p>
+                    <button class="btn btn-primary btn-sm" onclick="app.showTab('courses')">Add Your First Course</button>
                 </div>
             `;
-        }).join('');
+        } else {
+            healthList.innerHTML = courseHealth.map(item => {
+                let colorClass = 'good';
+                if (item.attendancePct < 65) colorClass = 'critical';
+                else if (item.attendancePct < this.settings.minAttendanceThreshold) colorClass = 'warning';
+
+                return `
+                    <div class="course-health-item">
+                        <div class="health-header">
+                            <span><strong>${item.course.code}:</strong> ${item.course.name}</span>
+                            <span><strong>${item.attendancePct}%</strong> (${item.sessions} sessions)</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-bar ${colorClass}" style="width: ${item.attendancePct}%;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
         // Recent Sessions
         const recentBody = document.getElementById('recentSessionsTableBody');
         const sortedRecords = [...this.records].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
 
         if (sortedRecords.length === 0) {
-            recentBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 2rem;">No attendance sessions recorded yet. Click "Take Attendance" to begin!</td></tr>`;
+            recentBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 2.5rem; color: var(--text-secondary);">No attendance sessions recorded yet. Click "Take Attendance" once courses and students are added.</td></tr>`;
             return;
         }
 
@@ -558,6 +637,12 @@ class AttendanceApp {
     populateCourseSelects() {
         const attendanceSelect = document.getElementById('attendanceCourseSelect');
         const reportSelect = document.getElementById('reportCourseSelect');
+
+        if (this.courses.length === 0) {
+            if (attendanceSelect) attendanceSelect.innerHTML = `<option value="">-- No Courses Created Yet --</option>`;
+            if (reportSelect) reportSelect.innerHTML = `<option value="">All Courses</option>`;
+            return;
+        }
 
         const courseOptions = this.courses.map(c => `<option value="${c.id}">${c.code} - ${c.name}</option>`).join('');
         if (attendanceSelect) attendanceSelect.innerHTML = courseOptions;
@@ -618,13 +703,23 @@ class AttendanceApp {
         const tbody = document.getElementById('attendanceMarkingBody');
         const query = filterQuery.toLowerCase().trim();
 
+        if (this.courses.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2.5rem; color: var(--text-secondary);">No courses created yet. <a href="javascript:void(0)" onclick="app.showTab('courses')">Create your first course</a> to take attendance.</td></tr>`;
+            return;
+        }
+
+        if (this.students.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2.5rem; color: var(--text-secondary);">No students enrolled yet. <a href="javascript:void(0)" onclick="app.showTab('students')">Add students</a> to begin recording attendance.</td></tr>`;
+            return;
+        }
+
         const filteredStudents = this.students.filter(s => {
             if (!query) return true;
             return s.rollNo.toLowerCase().includes(query) || s.name.toLowerCase().includes(query);
         });
 
         if (filteredStudents.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem;">No matching students found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem;">No matching students found for "${filterQuery}".</td></tr>`;
             return;
         }
 
@@ -1231,20 +1326,20 @@ class AttendanceApp {
     }
 
     async resetSystemData() {
-        if (!confirm('Warning: This will restore the database to default sample records. Continue?')) return;
+        if (!confirm('Warning: This will clear all courses, students, and attendance records to start completely fresh. Continue?')) return;
 
         if (this.isBackendConnected) {
             try {
                 await fetch(`${this.apiBase}/api/admin/reset`, { method: 'POST' });
                 await this.loadAllData();
-                this.showToast('Database reset to defaults!', 'info');
+                this.showToast('Database cleared to clean initial state.', 'info');
                 this.renderAll();
                 return;
             } catch (err) {}
         }
 
         this.seedLocalData();
-        this.showToast('Database reset to defaults!', 'info');
+        this.showToast('Database cleared to clean initial state.', 'info');
         this.renderAll();
     }
 
@@ -1253,6 +1348,11 @@ class AttendanceApp {
        ------------------------------------------------------------------------ */
     renderCoursesTable() {
         const tbody = document.getElementById('coursesTableBody');
+        if (this.courses.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 2.5rem; color: var(--text-secondary);">No courses registered yet. Click "Add Course" above to create your first subject.</td></tr>`;
+            return;
+        }
+
         tbody.innerHTML = this.courses.map(c => {
             const sessionCount = this.records.filter(r => r.courseId === c.id).length;
             return `

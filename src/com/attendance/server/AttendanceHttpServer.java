@@ -44,9 +44,11 @@ public class AttendanceHttpServer {
 
         // Authentication & Admin Endpoints
         server.createContext("/api/auth/login", this::handleLogin);
+        server.createContext("/api/auth/signup", this::handleSignup);
         server.createContext("/api/admin/users", this::handleAdminUsers);
         server.createContext("/api/admin/settings", this::handleAdminSettings);
         server.createContext("/api/admin/reset", this::handleAdminReset);
+        server.createContext("/api/admin/demo-data", this::handleAdminDemoData);
 
         // Standard Attendance API Endpoints
         server.createContext("/api/stats", this::handleStats);
@@ -64,8 +66,8 @@ public class AttendanceHttpServer {
         System.out.println("   STUDENT ATTENDANCE SYSTEM (ADMIN & FACULTY PORTAL)         ");
         System.out.println("==============================================================");
         System.out.println("-> Server started successfully on: http://localhost:" + port + "/");
-        System.out.println("-> Admin Credentials:   Username: admin   | Password: admin123");
-        System.out.println("-> Faculty Credentials: Username: faculty | Password: faculty123");
+        System.out.println("-> Web root directory: " + webRoot);
+        System.out.println("-> Ready to accept requests.");
         System.out.println("==============================================================");
     }
 
@@ -97,6 +99,54 @@ public class AttendanceHttpServer {
         } else {
             sendResponse(exchange, 401, "application/json", "{\"success\":false,\"error\":\"Invalid username or password\"}".getBytes(StandardCharsets.UTF_8));
         }
+    }
+
+    private void handleSignup(HttpExchange exchange) throws IOException {
+        if (handleCors(exchange)) return;
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            sendResponse(exchange, 405, "text/plain", "Method Not Allowed".getBytes(StandardCharsets.UTF_8));
+            return;
+        }
+
+        String body = readRequestBody(exchange);
+        String username = extractJsonString(body, "username");
+        String password = extractJsonString(body, "password");
+        String name = extractJsonString(body, "name");
+        String email = extractJsonString(body, "email");
+        String department = extractJsonString(body, "department");
+        String role = extractJsonString(body, "role");
+
+        if (username == null || username.trim().isEmpty() || password == null || password.trim().isEmpty() || name == null || name.trim().isEmpty()) {
+            sendResponse(exchange, 400, "application/json", "{\"success\":false,\"error\":\"Username, password, and name are required.\"}".getBytes(StandardCharsets.UTF_8));
+            return;
+        }
+
+        if (service.userExists(username.trim())) {
+            sendResponse(exchange, 400, "application/json", "{\"success\":false,\"error\":\"Username already exists. Please choose another username.\"}".getBytes(StandardCharsets.UTF_8));
+            return;
+        }
+
+        if (role == null || role.trim().isEmpty()) {
+            role = "FACULTY";
+        }
+
+        User newUser = new User(
+            "u_" + UUID.randomUUID().toString().substring(0, 8),
+            username.trim(),
+            password.trim(),
+            name.trim(),
+            role.trim().toUpperCase(),
+            email != null ? email.trim() : "",
+            department != null ? department.trim() : "General"
+        );
+
+        User saved = service.addUser(newUser);
+        String token = "sess_" + UUID.randomUUID().toString();
+        String res = String.format(
+            "{\"success\":true,\"token\":\"%s\",\"user\":%s}",
+            token, saved.toJson()
+        );
+        sendResponse(exchange, 201, "application/json", res.getBytes(StandardCharsets.UTF_8));
     }
 
     private void handleAdminUsers(HttpExchange exchange) throws IOException {
@@ -181,7 +231,17 @@ public class AttendanceHttpServer {
             return;
         }
         service.resetToDefaultData();
-        sendResponse(exchange, 200, "application/json", "{\"success\":true,\"message\":\"Database reset to sample defaults\"}".getBytes(StandardCharsets.UTF_8));
+        sendResponse(exchange, 200, "application/json", "{\"success\":true,\"message\":\"Database cleared to clean initial state\"}".getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void handleAdminDemoData(HttpExchange exchange) throws IOException {
+        if (handleCors(exchange)) return;
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            sendResponse(exchange, 405, "text/plain", "Method Not Allowed".getBytes(StandardCharsets.UTF_8));
+            return;
+        }
+        service.loadDemoSampleData();
+        sendResponse(exchange, 200, "application/json", "{\"success\":true,\"message\":\"Demo data loaded successfully\"}".getBytes(StandardCharsets.UTF_8));
     }
 
     private void handleStats(HttpExchange exchange) throws IOException {

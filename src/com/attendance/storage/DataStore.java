@@ -18,7 +18,8 @@ import java.util.regex.Pattern;
 
 /**
  * Handles persistent in-memory data store with JSON file backing.
- * Uses zero third-party dependencies for maximum portability.
+ * Fresh default state with secure administrator credentials (admin / Admin@123)
+ * and zero pre-populated dummy data so users create their own records.
  */
 public class DataStore {
     private final Path filePath;
@@ -39,68 +40,54 @@ public class DataStore {
                 loadFromFile();
             } else {
                 Files.createDirectories(filePath.getParent());
-                seedSampleData();
+                initCleanDatabase();
                 saveToFile();
             }
         } catch (Exception e) {
-            System.err.println("[DataStore] Failed to load data from file: " + e.getMessage() + ". Seeding defaults...");
-            seedSampleData();
+            System.err.println("[DataStore] Failed to load data from file: " + e.getMessage() + ". Initializing clean database...");
+            initCleanDatabase();
+            saveToFile();
         }
     }
 
-    public synchronized void seedSampleData() {
+    /**
+     * Initializes clean slate database with institutional settings and the root Administrator account.
+     * No pre-populated dummy students, courses, or records.
+     */
+    public synchronized void initCleanDatabase() {
         students.clear();
         courses.clear();
         records.clear();
         users.clear();
         settings.clear();
 
-        // 0. Default Settings
+        // Institutional Defaults
         settings.put("institutionName", "Apex Institute of Science & Technology");
         settings.put("minAttendanceThreshold", "75.0");
-        settings.put("academicTerm", "Academic Year 2026-27 (Fall Sem)");
+        settings.put("academicTerm", "Academic Year 2026-27");
 
-        // 1. Seed Users (Admin & Faculty)
-        User admin = new User("u1", "admin", "admin123", "Dean of Academic Affairs", "ADMIN", "dean@college.edu", "Administration");
-        User f1 = new User("u2", "faculty", "faculty123", "Dr. Alan Turing", "FACULTY", "turing@college.edu", "Computer Science");
-        User f2 = new User("u3", "linus", "faculty123", "Prof. Linus Torvalds", "FACULTY", "linus@college.edu", "Computer Science");
-        User f3 = new User("u4", "radia", "faculty123", "Dr. Radia Perlman", "FACULTY", "radia@college.edu", "Computer Science");
-        User f4 = new User("u5", "margaret", "faculty123", "Prof. Margaret Hamilton", "FACULTY", "margaret@college.edu", "Computer Science");
+        // Root Administrator: admin / Admin@123
+        User admin = new User("u_admin", "admin", "Admin@123", "System Administrator", "ADMIN", "admin@institution.edu", "Administration");
+        users.put(admin.getUsername().toLowerCase(), admin);
+    }
 
-        users.put(admin.getUsername(), admin);
-        users.put(f1.getUsername(), f1);
-        users.put(f2.getUsername(), f2);
-        users.put(f3.getUsername(), f3);
-        users.put(f4.getUsername(), f4);
+    /**
+     * Optional sample dataset loader (can be triggered manually by admin if desired).
+     */
+    public synchronized void loadDemoSampleData() {
+        initCleanDatabase();
 
-        // 2. Seed Courses
-        Course c1 = new Course("c1", "CS301", "Database Management Systems", "Computer Science", "Dr. Alan Turing");
+        Course c1 = new Course("c1", "CS301", "Database Management Systems", "Computer Science", "Prof. Alan Turing");
         Course c2 = new Course("c2", "CS302", "Operating Systems", "Computer Science", "Prof. Linus Torvalds");
-        Course c3 = new Course("c3", "CS303", "Computer Networks", "Computer Science", "Dr. Radia Perlman");
-        Course c4 = new Course("c4", "CS304", "Software Engineering", "Computer Science", "Prof. Margaret Hamilton");
-
         courses.put(c1.getId(), c1);
         courses.put(c2.getId(), c2);
-        courses.put(c3.getId(), c3);
-        courses.put(c4.getId(), c4);
 
-        // 3. Seed Students
         String[][] studentData = {
-            {"s1", "CS-101", "Aarav Sharma", "aarav.sharma@college.edu", "Computer Science", "5"},
-            {"s2", "CS-102", "Aditi Patel", "aditi.patel@college.edu", "Computer Science", "5"},
-            {"s3", "CS-103", "Bhavani Shankar", "bhavani.shankar@college.edu", "Computer Science", "5"},
-            {"s4", "CS-104", "Devika Nambiar", "devika.n@college.edu", "Computer Science", "5"},
-            {"s5", "CS-105", "Ishaan Verma", "ishaan.verma@college.edu", "Computer Science", "5"},
-            {"s6", "CS-106", "Kavya Subramanian", "kavya.s@college.edu", "Computer Science", "5"},
-            {"s7", "CS-107", "Manish Reddy", "manish.reddy@college.edu", "Computer Science", "5"},
-            {"s8", "CS-108", "Neha Gupta", "neha.gupta@college.edu", "Computer Science", "5"},
-            {"s9", "CS-109", "Pranav Rao", "pranav.rao@college.edu", "Computer Science", "5"},
-            {"s10", "CS-110", "Pooja Hegde", "pooja.hegde@college.edu", "Computer Science", "5"},
-            {"s11", "CS-111", "Rahul Nair", "rahul.nair@college.edu", "Computer Science", "5"},
-            {"s12", "CS-112", "Riya Sen", "riya.sen@college.edu", "Computer Science", "5"},
-            {"s13", "CS-113", "Siddharth Joshi", "siddharth.j@college.edu", "Computer Science", "5"},
-            {"s14", "CS-114", "Tanvi Kulkarni", "tanvi.k@college.edu", "Computer Science", "5"},
-            {"s15", "CS-115", "Vikram Rathore", "vikram.r@college.edu", "Computer Science", "5"}
+            {"s1", "CS-101", "Aarav Sharma", "aarav@institution.edu", "Computer Science", "5"},
+            {"s2", "CS-102", "Aditi Patel", "aditi@institution.edu", "Computer Science", "5"},
+            {"s3", "CS-103", "Bhavani Shankar", "bhavani@institution.edu", "Computer Science", "5"},
+            {"s4", "CS-104", "Devika Nambiar", "devika@institution.edu", "Computer Science", "5"},
+            {"s5", "CS-105", "Ishaan Verma", "ishaan@institution.edu", "Computer Science", "5"}
         };
 
         for (String[] row : studentData) {
@@ -108,40 +95,7 @@ public class DataStore {
             students.put(s.getId(), s);
         }
 
-        // 4. Seed Past 6 Attendance Sessions for each course
-        LocalDate today = LocalDate.now();
-        int recordCounter = 1;
-
-        for (Course c : courses.values()) {
-            for (int daysAgo = 10; daysAgo >= 0; daysAgo -= 2) {
-                LocalDate date = today.minusDays(daysAgo);
-                String recId = "rec_" + (recordCounter++);
-                AttendanceRecord rec = new AttendanceRecord(
-                    recId,
-                    c.getId(),
-                    date.toString(),
-                    "09:30 AM - 10:30 AM",
-                    "Lecture: " + c.getName() + " - Unit " + ((daysAgo % 3) + 1)
-                );
-
-                for (Student s : students.values()) {
-                    String status = "PRESENT";
-                    int rollHash = Math.abs((s.getRollNo() + c.getId() + date).hashCode());
-
-                    if (s.getRollNo().equals("CS-105") || s.getRollNo().equals("CS-111")) {
-                        status = (rollHash % 3 == 0) ? "PRESENT" : "ABSENT";
-                    } else if (s.getRollNo().equals("CS-108") || s.getRollNo().equals("CS-115")) {
-                        status = (rollHash % 10 < 7) ? "PRESENT" : "ABSENT";
-                    } else {
-                        if (rollHash % 12 == 0) status = "ABSENT";
-                        else if (rollHash % 15 == 0) status = "LATE";
-                        else status = "PRESENT";
-                    }
-                    rec.setStudentStatus(s.getId(), status);
-                }
-                records.put(rec.getId(), rec);
-            }
-        }
+        saveToFile();
     }
 
     public synchronized void saveToFile() {
@@ -215,7 +169,7 @@ public class DataStore {
         try {
             String content = Files.readString(filePath, StandardCharsets.UTF_8);
             if (content == null || content.trim().isEmpty()) {
-                seedSampleData();
+                initCleanDatabase();
                 saveToFile();
                 return;
             }
@@ -233,7 +187,7 @@ public class DataStore {
                     uMatcher.group(6),
                     uMatcher.group(7)
                 );
-                users.put(u.getUsername(), u);
+                users.put(u.getUsername().toLowerCase(), u);
             }
 
             // Extract students
@@ -288,25 +242,38 @@ public class DataStore {
                 records.put(r.getId(), r);
             }
 
-            // If users or courses are missing, reseed
-            if (users.isEmpty() || courses.isEmpty() || students.isEmpty()) {
-                seedSampleData();
+            // Always ensure root admin exists with Admin@123 password
+            if (!users.containsKey("admin")) {
+                User admin = new User("u_admin", "admin", "Admin@123", "System Administrator", "ADMIN", "admin@institution.edu", "Administration");
+                users.put("admin", admin);
                 saveToFile();
+            } else {
+                // Ensure admin password is Admin@123 as requested
+                User admin = users.get("admin");
+                if (!"Admin@123".equals(admin.getPassword())) {
+                    admin.setPassword("Admin@123");
+                    saveToFile();
+                }
             }
         } catch (Exception e) {
-            System.err.println("[DataStore] Parse error: " + e.getMessage() + ". Reseeding defaults.");
-            seedSampleData();
+            System.err.println("[DataStore] Parse error: " + e.getMessage() + ". Initializing clean database.");
+            initCleanDatabase();
             saveToFile();
         }
     }
 
     public User authenticate(String username, String password) {
         if (username == null || password == null) return null;
-        User u = users.get(username.trim());
+        User u = users.get(username.trim().toLowerCase());
         if (u != null && u.getPassword().equals(password.trim())) {
             return u;
         }
         return null;
+    }
+
+    public boolean userExists(String username) {
+        if (username == null) return false;
+        return users.containsKey(username.trim().toLowerCase());
     }
 
     public List<User> getUsers() {
@@ -317,19 +284,16 @@ public class DataStore {
         if (u.getId() == null || u.getId().isEmpty()) {
             u.setId("u_" + UUID.randomUUID().toString().substring(0, 8));
         }
-        if (u.getPassword() == null || u.getPassword().isEmpty()) {
-            u.setPassword("faculty123");
-        }
-        users.put(u.getUsername(), u);
+        users.put(u.getUsername().toLowerCase(), u);
         saveToFile();
         return u;
     }
 
     public synchronized boolean deleteUser(String username) {
         if ("admin".equalsIgnoreCase(username)) {
-            return false; // Prevent deleting root admin
+            return false; // Root admin cannot be deleted
         }
-        User removed = users.remove(username);
+        User removed = users.remove(username.toLowerCase());
         if (removed != null) {
             saveToFile();
             return true;

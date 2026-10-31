@@ -23,6 +23,17 @@ public class AttendanceService {
         return dataStore.authenticate(username, password);
     }
 
+    public boolean userExists(String username) {
+        return dataStore.userExists(username);
+    }
+
+    public User registerUser(User u) {
+        if (dataStore.userExists(u.getUsername())) {
+            return null;
+        }
+        return dataStore.addUser(u);
+    }
+
     public List<User> getAllUsers() {
         return dataStore.getUsers();
     }
@@ -44,8 +55,12 @@ public class AttendanceService {
     }
 
     public void resetToDefaultData() {
-        dataStore.seedSampleData();
+        dataStore.initCleanDatabase();
         dataStore.saveToFile();
+    }
+
+    public void loadDemoSampleData() {
+        dataStore.loadDemoSampleData();
     }
 
     public List<Student> getAllStudents() {
