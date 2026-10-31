@@ -1309,3 +1309,54 @@ body {
         color: #000;
     }
 }
+
+/* Mobile usability improvements */
+@media (max-width: 768px) {
+    .login-wrapper {
+        min-height: 100svh;
+        align-items: flex-start;
+        padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .login-card {
+        max-width: 520px;
+        margin: auto;
+        padding: clamp(1.1rem, 5vw, 1.75rem);
+        border-radius: 16px;
+    }
+
+    .login-header { margin-bottom: 1.1rem; }
+    .login-header h2 { font-size: 1.3rem; }
+    .auth-tabs { margin-bottom: 1.1rem; }
+    .auth-tab-btn, .btn { min-height: 44px; }
+    .form-control { min-height: 44px; font-size: 16px; }
+
+    .app-layout { min-height: 100svh; height: 100svh; }
+    .sidebar { z-index: 1000; width: min(84vw, 300px); }
+    .topbar { min-height: 60px; gap: 0.6rem; }
+    .topbar-title { min-width: 0; }
+    .topbar-title h1 { font-size: 1rem; }
+    .topbar-actions { gap: 0.4rem; }
+    .content-scroll { padding: 0.85rem; }
+    .card { padding: 1rem; }
+    .card-header { align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; }
+    .form-row, .session-form-row { grid-template-columns: minmax(0, 1fr); }
+    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .data-table { min-width: 620px; }
+    .modal { padding: 0.65rem; }
+    .modal-dialog, .modal-dialog.modal-lg { width: 100%; max-height: calc(100svh - 1.3rem); overflow-y: auto; }
+    .toast-container { left: 0.75rem; right: 0.75rem; bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+    .toast { width: 100%; min-width: 0; }
+}
+
+@media (max-width: 380px) {
+    .login-wrapper { padding-left: 0.65rem; padding-right: 0.65rem; }
+    .login-card { padding: 1rem; }
+    .content-scroll { padding: 0.65rem; }
+    .topbar { padding: 0 0.65rem; }
+}
+
+@media (max-height: 650px) and (max-width: 768px) {
+    .login-wrapper { align-items: flex-start; }
+    .login-logo { width: 44px; height: 44px; margin-bottom: 0.6rem; }
+}
