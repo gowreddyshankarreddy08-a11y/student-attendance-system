@@ -16,7 +16,7 @@ class AttendanceApp {
         this.records = [];
         this.users = [];
         this.settings = {
-            institutionName: 'Apex Institute of Science & Technology',
+            institutionName: 'Vishwa Vishwani Institute Of System And Management',
             minAttendanceThreshold: 75.0,
             academicTerm: 'Academic Year 2026-27 (Fall Sem)'
         };
@@ -298,7 +298,7 @@ class AttendanceApp {
                 if (userRes && userRes.length) this.users = userRes;
                 if (settRes && settRes.minAttendanceThreshold) {
                     this.settings = {
-                        institutionName: settRes.institutionName || 'Apex Institute',
+                        institutionName: settRes.institutionName || 'Vishwa Vishwani Institute Of System And Management Institute',
                         minAttendanceThreshold: parseFloat(settRes.minAttendanceThreshold) || 75.0,
                         academicTerm: settRes.academicTerm || 'Fall 2026'
                     };
@@ -354,7 +354,7 @@ class AttendanceApp {
 
     seedLocalData() {
         this.settings = {
-            institutionName: 'Apex Institute of Science & Technology',
+            institutionName: 'Vishwa Vishwani Institute Of System And Management',
             minAttendanceThreshold: 75.0,
             academicTerm: 'Academic Year 2026-27'
         };
@@ -1273,7 +1273,7 @@ class AttendanceApp {
        ADMIN: System Settings & Database Management
        ------------------------------------------------------------------------ */
     renderAdminSettingsForm() {
-        document.getElementById('settingInstitutionName').value = this.settings.institutionName || 'Apex Institute';
+        document.getElementById('settingInstitutionName').value = this.settings.institutionName || 'Vishwa Vishwani Institute Of System And Management Institute';
         document.getElementById('settingThreshold').value = this.settings.minAttendanceThreshold || 75;
         document.getElementById('settingAcademicTerm').value = this.settings.academicTerm || 'Fall 2026';
     }

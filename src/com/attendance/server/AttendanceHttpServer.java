@@ -248,7 +248,7 @@ public class AttendanceHttpServer {
         if (handleCors(exchange)) return;
         Map<String, Object> stats = service.getOverallStats();
         Map<?, ?> settings = (Map<?, ?>) stats.get("settings");
-        String instName = settings != null && settings.containsKey("institutionName") ? settings.get("institutionName").toString() : "Apex University";
+        String instName = settings != null && settings.containsKey("institutionName") ? settings.get("institutionName").toString() : "Vishwa Vishwani Institute Of System And Management";
 
         String json = String.format(
             "{\"totalStudents\":%d,\"totalCourses\":%d,\"totalSessions\":%d,\"totalFaculty\":%d,\"overallAttendanceRate\":%.1f,\"defaulterCount\":%d,\"institutionName\":\"%s\"}",

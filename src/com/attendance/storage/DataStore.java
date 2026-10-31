@@ -62,7 +62,7 @@ public class DataStore {
         settings.clear();
 
         // Institutional Defaults
-        settings.put("institutionName", "Apex Institute of Science & Technology");
+        settings.put("institutionName", "Vishwa Vishwani Institute Of System And Management");
         settings.put("minAttendanceThreshold", "75.0");
         settings.put("academicTerm", "Academic Year 2026-27");
 

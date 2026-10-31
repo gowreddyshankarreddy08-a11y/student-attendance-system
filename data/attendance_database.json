@@ -1,7 +1,5 @@
 {
-  "settings": {
-
-  },
+  "settings": {"institutionName":"Vishwa Vishwani Institute Of System And Management","attendanceThreshold":"75","semesterName":"Current Semester"},
   "users": [
     {"id":"u_a077b07c","username":"jsmith","password":"MyPass@123","name":"Dr. Jane Smith","role":"FACULTY","email":"jsmith@inst.edu","department":"CS"},
     {"id":"u_admin","username":"admin","password":"Admin@123","name":"System Administrator","role":"ADMIN","email":"admin@institution.edu","department":"Administration"}

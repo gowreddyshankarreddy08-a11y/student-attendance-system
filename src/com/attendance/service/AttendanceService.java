@@ -222,7 +222,7 @@ public class AttendanceService {
         String courseTitle = (c != null) ? c.getCode() + " - " + c.getName() : "All Courses";
 
         csv.append("Student Attendance Official Report\n");
-        csv.append("Institution:,\"").append(dataStore.getSettings().getOrDefault("institutionName", "Apex University")).append("\"\n");
+        csv.append("Institution:,\"").append(dataStore.getSettings().getOrDefault("institutionName", "Vishwa Vishwani Institute Of System And Management")).append("\"\n");
         csv.append("Course:,\"").append(courseTitle).append("\"\n");
         csv.append("Generated On:,\"").append(new Date()).append("\"\n\n");
 
