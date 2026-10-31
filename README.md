@@ -10,10 +10,10 @@ Built with **Java (Backend REST API & Embedded Server)**, **HTML5**, **CSS3**, a
 
 | Role | Username | Password | Access Capabilities |
 | :--- | :--- | :--- | :--- |
-| **🛡️ Administrator** | `admin` | `admin123` | Full system control: Faculty roster management, attendance threshold configuration, full JSON database backup & reset, all student records |
-| **👨‍🏫 Faculty Member** | `faculty` | `faculty123` | Quick attendance marking, student directory, defaulter recovery advisor, CSV/PDF reports |
+| **🛡️ Administrator** | `admin` | `Admin@123` | Full system control: Faculty roster management, attendance threshold configuration, full JSON database backup & reset, all student records |
+| **🎓 Demo Faculty** | `demo` | `Demo@1234` | Pre-loaded sample courses, students, and attendance records for presentations and evaluation |
 
-> *Tip: On the public website, 1-click **"Quick Demo Login"** buttons are available to sign in immediately without typing!*
+> *Tip: Use the **Try Demo Account** button on the public website to explore the pre-loaded demo without typing credentials.*
 
 ---
 

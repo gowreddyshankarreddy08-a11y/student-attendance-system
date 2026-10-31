@@ -51,8 +51,8 @@ public class DataStore {
     }
 
     /**
-     * Initializes clean slate database with institutional settings and the root Administrator account.
-     * No pre-populated dummy students, courses, or records.
+     * Initializes clean slate database with institutional settings, the root Administrator account,
+     * and the read-only Demo account pre-seeded with realistic data for showcasing.
      */
     public synchronized void initCleanDatabase() {
         students.clear();
@@ -69,32 +69,131 @@ public class DataStore {
         // Root Administrator: admin / Admin@123
         User admin = new User("u_admin", "admin", "Admin@123", "System Administrator", "ADMIN", "admin@institution.edu", "Administration");
         users.put(admin.getUsername().toLowerCase(), admin);
+
+        // Demo Faculty Account: demo / Demo@1234 (pre-seeded with data for externals)
+        User demo = new User("u_demo", "demo", "Demo@1234", "Dr. Demo Faculty", "FACULTY", "demo@vvism.edu", "Computer Science");
+        users.put(demo.getUsername().toLowerCase(), demo);
+
+        seedDemoData();
     }
 
     /**
-     * Optional sample dataset loader (can be triggered manually by admin if desired).
+     * Seeds rich demonstration data — 3 courses, 10 students, 20 attendance sessions.
+     * Called automatically during initCleanDatabase so the demo account always has data.
      */
-    public synchronized void loadDemoSampleData() {
-        initCleanDatabase();
-
-        Course c1 = new Course("c1", "CS301", "Database Management Systems", "Computer Science", "Prof. Alan Turing");
-        Course c2 = new Course("c2", "CS302", "Operating Systems", "Computer Science", "Prof. Linus Torvalds");
+    private void seedDemoData() {
+        // --- Courses ---
+        Course c1 = new Course("c1", "CS301", "Database Management Systems", "Computer Science", "Dr. Demo Faculty");
+        Course c2 = new Course("c2", "CS302", "Operating Systems", "Computer Science", "Dr. Demo Faculty");
+        Course c3 = new Course("c3", "CS401", "Software Engineering", "Computer Science", "Dr. Demo Faculty");
         courses.put(c1.getId(), c1);
         courses.put(c2.getId(), c2);
+        courses.put(c3.getId(), c3);
 
+        // --- Students (10) ---
         String[][] studentData = {
-            {"s1", "CS-101", "Aarav Sharma", "aarav@institution.edu", "Computer Science", "5"},
-            {"s2", "CS-102", "Aditi Patel", "aditi@institution.edu", "Computer Science", "5"},
-            {"s3", "CS-103", "Bhavani Shankar", "bhavani@institution.edu", "Computer Science", "5"},
-            {"s4", "CS-104", "Devika Nambiar", "devika@institution.edu", "Computer Science", "5"},
-            {"s5", "CS-105", "Ishaan Verma", "ishaan@institution.edu", "Computer Science", "5"}
+            {"s1",  "VVISM-CS-001", "Aarav Sharma",      "aarav.sharma@vvism.edu",   "Computer Science", "5"},
+            {"s2",  "VVISM-CS-002", "Aditi Patel",        "aditi.patel@vvism.edu",    "Computer Science", "5"},
+            {"s3",  "VVISM-CS-003", "Bhavani Shankar",    "bhavani.s@vvism.edu",      "Computer Science", "5"},
+            {"s4",  "VVISM-CS-004", "Devika Nambiar",     "devika.n@vvism.edu",       "Computer Science", "5"},
+            {"s5",  "VVISM-CS-005", "Ishaan Verma",       "ishaan.v@vvism.edu",       "Computer Science", "5"},
+            {"s6",  "VVISM-CS-006", "Kavya Reddy",        "kavya.r@vvism.edu",        "Computer Science", "5"},
+            {"s7",  "VVISM-CS-007", "Manish Kumar",       "manish.k@vvism.edu",       "Computer Science", "5"},
+            {"s8",  "VVISM-CS-008", "Priya Agarwal",      "priya.a@vvism.edu",        "Computer Science", "5"},
+            {"s9",  "VVISM-CS-009", "Rohit Sinha",        "rohit.s@vvism.edu",        "Computer Science", "5"},
+            {"s10", "VVISM-CS-010", "Sneha Kulkarni",     "sneha.k@vvism.edu",        "Computer Science", "5"}
         };
-
         for (String[] row : studentData) {
             Student s = new Student(row[0], row[1], row[2], row[3], row[4], Integer.parseInt(row[5]));
             students.put(s.getId(), s);
         }
 
+        // --- Attendance Records (varied — some students are defaulters) ---
+        // Format: id, courseId, date, slot, notes, then student statuses
+        // c1 (DBMS) — 8 sessions
+        String[][] c1Sessions = {
+            {"r01","c1","2026-08-04","09:00 AM - 10:00 AM","Introduction to Databases"},
+            {"r02","c1","2026-08-06","09:00 AM - 10:00 AM","Relational Model & Keys"},
+            {"r03","c1","2026-08-11","09:00 AM - 10:00 AM","SQL Basics"},
+            {"r04","c1","2026-08-13","09:00 AM - 10:00 AM","SQL Joins & Subqueries"},
+            {"r05","c1","2026-08-18","09:00 AM - 10:00 AM","Normalization (1NF-3NF)"},
+            {"r06","c1","2026-08-20","09:00 AM - 10:00 AM","Indexing & B-Trees"},
+            {"r07","c1","2026-08-25","09:00 AM - 10:00 AM","Transactions & ACID"},
+            {"r08","c1","2026-08-27","09:00 AM - 10:00 AM","Concurrency Control"}
+        };
+        // Per-student status arrays (order matches s1..s10)
+        // s7 and s9 will be defaulters in c1
+        String[][] c1Statuses = {
+            {"PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","ABSENT","PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","ABSENT","ABSENT","PRESENT","PRESENT","PRESENT"},
+            {"PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","ABSENT","ABSENT","ABSENT","PRESENT"},
+            {"ABSENT","PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","ABSENT"},
+            {"PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","ABSENT","PRESENT","ABSENT","PRESENT"}
+        };
+        addSessionBatch(c1Sessions, c1Statuses);
+
+        // c2 (OS) — 7 sessions
+        String[][] c2Sessions = {
+            {"r09","c2","2026-08-05","10:00 AM - 11:00 AM","Introduction to OS"},
+            {"r10","c2","2026-08-07","10:00 AM - 11:00 AM","Process Management"},
+            {"r11","c2","2026-08-12","10:00 AM - 11:00 AM","CPU Scheduling"},
+            {"r12","c2","2026-08-14","10:00 AM - 11:00 AM","Memory Management"},
+            {"r13","c2","2026-08-19","10:00 AM - 11:00 AM","File Systems"},
+            {"r14","c2","2026-08-21","10:00 AM - 11:00 AM","Deadlocks"},
+            {"r15","c2","2026-08-26","10:00 AM - 11:00 AM","I/O Systems & Virtualization"}
+        };
+        String[][] c2Statuses = {
+            {"PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","PRESENT"},
+            {"PRESENT","ABSENT","PRESENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"ABSENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","PRESENT","ABSENT","ABSENT","PRESENT","ABSENT"},
+            {"PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","PRESENT"}
+        };
+        addSessionBatch(c2Sessions, c2Statuses);
+
+        // c3 (SE) — 5 sessions
+        String[][] c3Sessions = {
+            {"r16","c3","2026-08-04","11:15 AM - 12:15 PM","SDLC & Agile Overview"},
+            {"r17","c3","2026-08-11","11:15 AM - 12:15 PM","Requirements Engineering"},
+            {"r18","c3","2026-08-18","11:15 AM - 12:15 PM","UML Diagrams"},
+            {"r19","c3","2026-08-25","11:15 AM - 12:15 PM","Testing Strategies"},
+            {"r20","c3","2026-09-01","11:15 AM - 12:15 PM","DevOps & CI/CD Pipelines"}
+        };
+        String[][] c3Statuses = {
+            {"PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","ABSENT","PRESENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT","ABSENT","PRESENT"},
+            {"PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","ABSENT","ABSENT","ABSENT","PRESENT"},
+            {"ABSENT","PRESENT","PRESENT","PRESENT","PRESENT","PRESENT","ABSENT","PRESENT","PRESENT","PRESENT"}
+        };
+        addSessionBatch(c3Sessions, c3Statuses);
+    }
+
+    private void addSessionBatch(String[][] sessions, String[][] statuses) {
+        String[] studentIds = {"s1","s2","s3","s4","s5","s6","s7","s8","s9","s10"};
+        for (int i = 0; i < sessions.length; i++) {
+            String[] s = sessions[i];
+            AttendanceRecord rec = new AttendanceRecord(s[0], s[1], s[2], s[3], s[4]);
+            rec.setTimestamp(System.currentTimeMillis() - ((sessions.length - i) * 86400000L));
+            String[] statusRow = statuses[i];
+            for (int j = 0; j < studentIds.length && j < statusRow.length; j++) {
+                rec.setStudentStatus(studentIds[j], statusRow[j]);
+            }
+            records.put(rec.getId(), rec);
+        }
+    }
+
+    /**
+     * Optional full demo dataset loader (Admin Settings → "Load Demo Data" button).
+     * Resets database and re-seeds demo data.
+     */
+    public synchronized void loadDemoSampleData() {
+        initCleanDatabase();
         saveToFile();
     }
 
@@ -248,13 +347,31 @@ public class DataStore {
                 users.put("admin", admin);
                 saveToFile();
             } else {
-                // Ensure admin password is Admin@123 as requested
                 User admin = users.get("admin");
                 if (!"Admin@123".equals(admin.getPassword())) {
                     admin.setPassword("Admin@123");
                     saveToFile();
                 }
             }
+
+            // Always ensure demo account exists with Demo@1234 password
+            boolean addedDemoAccount = false;
+            if (!users.containsKey("demo")) {
+                User demo = new User("u_demo", "demo", "Demo@1234", "Dr. Demo Faculty", "FACULTY", "demo@vvism.edu", "Computer Science");
+                users.put("demo", demo);
+                addedDemoAccount = true;
+            } else {
+                User demo = users.get("demo");
+                if (!"Demo@1234".equals(demo.getPassword())) {
+                    demo.setPassword("Demo@1234");
+                }
+            }
+
+            // Upgrade older empty databases so the demo account has showcase data.
+            if (addedDemoAccount && students.isEmpty() && courses.isEmpty() && records.isEmpty()) {
+                seedDemoData();
+            }
+            saveToFile();
         } catch (Exception e) {
             System.err.println("[DataStore] Parse error: " + e.getMessage() + ". Initializing clean database.");
             initCleanDatabase();

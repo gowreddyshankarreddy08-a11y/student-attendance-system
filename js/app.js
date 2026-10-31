@@ -298,7 +298,7 @@ class AttendanceApp {
                 if (userRes && userRes.length) this.users = userRes;
                 if (settRes && settRes.minAttendanceThreshold) {
                     this.settings = {
-                        institutionName: settRes.institutionName || 'Vishwa Vishwani Institute Of System And Management Institute',
+                        institutionName: settRes.institutionName || 'Vishwa Vishwani Institute Of System And Management',
                         minAttendanceThreshold: parseFloat(settRes.minAttendanceThreshold) || 75.0,
                         academicTerm: settRes.academicTerm || 'Fall 2026'
                     };
@@ -1273,7 +1273,7 @@ class AttendanceApp {
        ADMIN: System Settings & Database Management
        ------------------------------------------------------------------------ */
     renderAdminSettingsForm() {
-        document.getElementById('settingInstitutionName').value = this.settings.institutionName || 'Vishwa Vishwani Institute Of System And Management Institute';
+        document.getElementById('settingInstitutionName').value = this.settings.institutionName || 'Vishwa Vishwani Institute Of System And Management';
         document.getElementById('settingThreshold').value = this.settings.minAttendanceThreshold || 75;
         document.getElementById('settingAcademicTerm').value = this.settings.academicTerm || 'Fall 2026';
     }

@@ -241,6 +241,110 @@ class AttendanceApp {
         this.showLoginScreen();
     }
 
+    async demoLogin() {
+        const btn = document.querySelector('.demo-banner');
+        if (btn) { btn.style.opacity = '0.7'; btn.style.pointerEvents = 'none'; }
+
+        if (this.isBackendConnected) {
+            try {
+                const res = await fetch(`${this.apiBase}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'demo', password: 'Demo@1234' })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.user) {
+                        this.currentUser = data.user;
+                        sessionStorage.setItem('attendsmart_user', JSON.stringify(data.user));
+                        this.showToast('🎓 Demo mode loaded! Explore all features.', 'success');
+                        this.showAppLayout();
+                        if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn('Backend demo login failed, using local demo data:', err);
+            }
+        }
+
+        // Local Storage Demo Fallback (for GitHub Pages)
+        this.seedDemoLocalData();
+        const demoUser = { id: 'u_demo', username: 'demo', name: 'Dr. Demo Faculty', role: 'FACULTY', email: 'demo@vvism.edu', department: 'Computer Science' };
+        this.currentUser = demoUser;
+        sessionStorage.setItem('attendsmart_user', JSON.stringify(demoUser));
+        this.showToast('🎓 Demo mode loaded! Explore all features.', 'success');
+        this.showAppLayout();
+        if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+    }
+
+    seedDemoLocalData() {
+        this.settings = {
+            institutionName: 'Vishwa Vishwani Institute Of System And Management',
+            minAttendanceThreshold: 75.0,
+            academicTerm: 'Academic Year 2026-27'
+        };
+
+        this.users = [
+            { id: 'u_admin', username: 'admin', password: 'Admin@123', name: 'System Administrator', role: 'ADMIN', email: 'admin@institution.edu', department: 'Administration' },
+            { id: 'u_demo',  username: 'demo',  password: 'Demo@1234',  name: 'Dr. Demo Faculty',    role: 'FACULTY', email: 'demo@vvism.edu', department: 'Computer Science' }
+        ];
+
+        this.courses = [
+            { id: 'c1', code: 'CS301', name: 'Database Management Systems', department: 'Computer Science', faculty: 'Dr. Demo Faculty' },
+            { id: 'c2', code: 'CS302', name: 'Operating Systems',            department: 'Computer Science', faculty: 'Dr. Demo Faculty' },
+            { id: 'c3', code: 'CS401', name: 'Software Engineering',         department: 'Computer Science', faculty: 'Dr. Demo Faculty' }
+        ];
+
+        this.students = [
+            { id: 's1',  rollNo: 'VVISM-CS-001', name: 'Aarav Sharma',    email: 'aarav.sharma@vvism.edu', department: 'Computer Science', semester: 5 },
+            { id: 's2',  rollNo: 'VVISM-CS-002', name: 'Aditi Patel',      email: 'aditi.patel@vvism.edu',  department: 'Computer Science', semester: 5 },
+            { id: 's3',  rollNo: 'VVISM-CS-003', name: 'Bhavani Shankar',  email: 'bhavani.s@vvism.edu',    department: 'Computer Science', semester: 5 },
+            { id: 's4',  rollNo: 'VVISM-CS-004', name: 'Devika Nambiar',   email: 'devika.n@vvism.edu',     department: 'Computer Science', semester: 5 },
+            { id: 's5',  rollNo: 'VVISM-CS-005', name: 'Ishaan Verma',     email: 'ishaan.v@vvism.edu',     department: 'Computer Science', semester: 5 },
+            { id: 's6',  rollNo: 'VVISM-CS-006', name: 'Kavya Reddy',      email: 'kavya.r@vvism.edu',      department: 'Computer Science', semester: 5 },
+            { id: 's7',  rollNo: 'VVISM-CS-007', name: 'Manish Kumar',     email: 'manish.k@vvism.edu',     department: 'Computer Science', semester: 5 },
+            { id: 's8',  rollNo: 'VVISM-CS-008', name: 'Priya Agarwal',    email: 'priya.a@vvism.edu',      department: 'Computer Science', semester: 5 },
+            { id: 's9',  rollNo: 'VVISM-CS-009', name: 'Rohit Sinha',      email: 'rohit.s@vvism.edu',      department: 'Computer Science', semester: 5 },
+            { id: 's10', rollNo: 'VVISM-CS-010', name: 'Sneha Kulkarni',   email: 'sneha.k@vvism.edu',      department: 'Computer Science', semester: 5 }
+        ];
+
+        const mk = (id, cId, dt, slot, notes, statuses) => {
+            const recs = {};
+            const ids = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10'];
+            statuses.forEach((v, i) => { recs[ids[i]] = v; });
+            return { id, courseId: cId, date: dt, timeSlot: slot, notes, timestamp: Date.now(), records: recs };
+        };
+
+        this.records = [
+            // DBMS (c1) — 8 sessions, s7 & s9 are defaulters
+            mk('r01','c1','2026-08-04','09:00 AM - 10:00 AM','Introduction to Databases',   ['PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r02','c1','2026-08-06','09:00 AM - 10:00 AM','Relational Model & Keys',     ['PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r03','c1','2026-08-11','09:00 AM - 10:00 AM','SQL Basics',                  ['PRESENT','ABSENT','PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','PRESENT']),
+            mk('r04','c1','2026-08-13','09:00 AM - 10:00 AM','SQL Joins & Subqueries',      ['PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','ABSENT','ABSENT','PRESENT','PRESENT','PRESENT']),
+            mk('r05','c1','2026-08-18','09:00 AM - 10:00 AM','Normalization (1NF-3NF)',     ['PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','ABSENT','ABSENT','ABSENT','PRESENT']),
+            mk('r06','c1','2026-08-20','09:00 AM - 10:00 AM','Indexing & B-Trees',          ['ABSENT','PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r07','c1','2026-08-25','09:00 AM - 10:00 AM','Transactions & ACID',         ['PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','ABSENT']),
+            mk('r08','c1','2026-08-27','09:00 AM - 10:00 AM','Concurrency Control',         ['PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            // OS (c2) — 7 sessions
+            mk('r09','c2','2026-08-05','10:00 AM - 11:00 AM','Introduction to OS',          ['PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','PRESENT']),
+            mk('r10','c2','2026-08-07','10:00 AM - 11:00 AM','Process Management',          ['PRESENT','ABSENT','PRESENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r11','c2','2026-08-12','10:00 AM - 11:00 AM','CPU Scheduling',              ['PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r12','c2','2026-08-14','10:00 AM - 11:00 AM','Memory Management',           ['ABSENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r13','c2','2026-08-19','10:00 AM - 11:00 AM','File Systems',                ['PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','PRESENT','ABSENT','ABSENT','PRESENT','ABSENT']),
+            mk('r14','c2','2026-08-21','10:00 AM - 11:00 AM','Deadlocks',                  ['PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r15','c2','2026-08-26','10:00 AM - 11:00 AM','I/O Systems & Virtualization',['PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','PRESENT']),
+            // SE (c3) — 5 sessions
+            mk('r16','c3','2026-08-04','11:15 AM - 12:15 PM','SDLC & Agile Overview',       ['PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r17','c3','2026-08-11','11:15 AM - 12:15 PM','Requirements Engineering',    ['PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r18','c3','2026-08-18','11:15 AM - 12:15 PM','UML Diagrams',                ['PRESENT','ABSENT','PRESENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT','ABSENT','PRESENT']),
+            mk('r19','c3','2026-08-25','11:15 AM - 12:15 PM','Testing Strategies',          ['PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','ABSENT','ABSENT','ABSENT','PRESENT']),
+            mk('r20','c3','2026-09-01','11:15 AM - 12:15 PM','DevOps & CI/CD Pipelines',    ['ABSENT','PRESENT','PRESENT','PRESENT','PRESENT','PRESENT','ABSENT','PRESENT','PRESENT','PRESENT'])
+        ];
+
+        this.saveLocalData();
+    }
+
     /* ------------------------------------------------------------------------
        Backend Detection & Data Loading (Dual-Mode)
        ------------------------------------------------------------------------ */
@@ -298,7 +402,7 @@ class AttendanceApp {
                 if (userRes && userRes.length) this.users = userRes;
                 if (settRes && settRes.minAttendanceThreshold) {
                     this.settings = {
-                        institutionName: settRes.institutionName || 'Vishwa Vishwani Institute Of System And Management Institute',
+                        institutionName: settRes.institutionName || 'Vishwa Vishwani Institute Of System And Management',
                         minAttendanceThreshold: parseFloat(settRes.minAttendanceThreshold) || 75.0,
                         academicTerm: settRes.academicTerm || 'Fall 2026'
                     };
@@ -1273,7 +1377,7 @@ class AttendanceApp {
        ADMIN: System Settings & Database Management
        ------------------------------------------------------------------------ */
     renderAdminSettingsForm() {
-        document.getElementById('settingInstitutionName').value = this.settings.institutionName || 'Vishwa Vishwani Institute Of System And Management Institute';
+        document.getElementById('settingInstitutionName').value = this.settings.institutionName || 'Vishwa Vishwani Institute Of System And Management';
         document.getElementById('settingThreshold').value = this.settings.minAttendanceThreshold || 75;
         document.getElementById('settingAcademicTerm').value = this.settings.academicTerm || 'Fall 2026';
     }
